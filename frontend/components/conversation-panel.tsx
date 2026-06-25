@@ -88,7 +88,7 @@ export function ConversationPanel({
 
       {aiUnavailable ? (
         <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700" aria-live="polite" role="status">
-          <p>Natural-language intake is currently unavailable because the AI service is not configured.</p>
+          <p>Natural-language intake is currently unavailable because the AI service is not available right now.</p>
           <p className="mt-1 text-slate-600">You can continue with the guided configurator.</p>
         </div>
       ) : null}

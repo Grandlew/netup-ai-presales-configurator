@@ -349,7 +349,7 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not available right now.")).toBeInTheDocument();
     });
 
     expect(screen.getByText("You can continue with the guided configurator.")).toBeInTheDocument();
@@ -368,7 +368,7 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not available right now.")).toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
