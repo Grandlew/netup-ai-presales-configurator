@@ -25,13 +25,13 @@ export default function HomePage() {
 
   return (
     <main className="shell">
-      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.16fr)_minmax(320px,0.84fr)]">
-        <div id="guided-configurator" className="min-w-0 space-y-6">
+      <section className="grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start">
+        <div id="guided-configurator" className="min-w-0 space-y-5">
           <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
-          <h1 className="max-w-4xl font-serif text-4xl leading-tight text-ink md:text-5xl xl:text-6xl">
+          <h1 className="max-w-4xl font-serif text-[2.7rem] leading-[1.05] text-ink md:text-[3.2rem] xl:text-[4rem]">
             Design Your IPTV or OTT Solution
           </h1>
-          <p className="max-w-3xl text-lg text-slate-600">
+          <p className="max-w-3xl text-[1.05rem] text-slate-600 md:text-lg">
             Describe your project or complete the guided questionnaire to receive a preliminary NetUP solution recommendation.
           </p>
           <div className="panel max-w-3xl p-5 text-sm text-slate-600">
@@ -47,15 +47,15 @@ export default function HomePage() {
             <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
           )}
         </div>
-        <aside className="min-w-0 space-y-6">
+        <aside className="min-w-0 space-y-5 xl:pt-2">
           <ConversationPanel
             onUseGuidedConfigurator={focusWizard}
             resetSignal={conversationResetSignal}
           />
-          <div className="panel p-6">
+          <div className="panel p-5">
             <p className="text-sm uppercase tracking-[0.24em] text-blue">Why deterministic rules</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">AI assists the intake, not the recommendation engine</h2>
-            <ul className="mt-4 space-y-3 text-sm text-slate-600">
+            <h2 className="mt-2 text-xl font-semibold text-ink">AI assists the intake, not the recommendation engine</h2>
+            <ul className="mt-3 space-y-2.5 text-sm text-slate-600">
               <li>Recommendations always come from validated backend rules.</li>
               <li>Capacity calculations stay deterministic and auditable.</li>
               <li>Every result is framed as a preliminary presales view, not a final engineering design.</li>

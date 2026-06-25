@@ -389,12 +389,13 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
         className="panel p-5 md:p-6"
         noValidate
       >
-        {step < 6 ? (
-          <div className="mb-8 border-b border-slate-200 pb-6">
-            <h2 className="text-2xl font-semibold text-ink md:text-3xl">{currentStep.title}</h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-600">{currentStep.description}</p>
-          </div>
-        ) : null}
+        <div className="step-panel" data-step-active="true">
+          {step < 6 ? (
+            <div className="mb-8 border-b border-slate-200 pb-6">
+              <h2 className="text-2xl font-semibold text-ink md:text-3xl">{currentStep.title}</h2>
+              <p className="mt-2 max-w-3xl text-sm text-slate-600">{currentStep.description}</p>
+            </div>
+          ) : null}
 
         {step === 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -561,20 +562,21 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
           </div>
         ) : null}
 
-        {step === 6 && recommendation ? (
-          <ResultsPanel
-            recommendation={recommendation}
-            submittedValues={submittedValues}
-            reportHtml={reportHtml}
-            onRequestEngineeringReview={resultActions.onRequestEngineeringReview}
-            onSaveLead={resultActions.onSaveLead}
-            onPrintReport={resultActions.onPrintReport}
-            onStartOver={resultActions.onStartOver}
-            onEditConfiguration={resultActions.onEditConfiguration}
-            leadSaved={resultActions.leadSaved}
-            loadingAction={resultActions.savingLead}
-          />
-        ) : null}
+          {step === 6 && recommendation ? (
+            <ResultsPanel
+              recommendation={recommendation}
+              submittedValues={submittedValues}
+              reportHtml={reportHtml}
+              onRequestEngineeringReview={resultActions.onRequestEngineeringReview}
+              onSaveLead={resultActions.onSaveLead}
+              onPrintReport={resultActions.onPrintReport}
+              onStartOver={resultActions.onStartOver}
+              onEditConfiguration={resultActions.onEditConfiguration}
+              leadSaved={resultActions.leadSaved}
+              loadingAction={resultActions.savingLead}
+            />
+          ) : null}
+        </div>
 
         <div aria-live="assertive" className="mt-4">
           {submitError ? (
@@ -594,7 +596,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
             type="button"
             onClick={() => setStep((current) => Math.max(0, current - 1))}
             disabled={!canGoBack}
-            className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+            className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
           >
             Back
           </button>
@@ -707,7 +709,7 @@ function FieldInput({
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : helperText ? helperId : undefined}
         className={clsx(
-          "min-h-12 w-full rounded-2xl border px-4 py-3 text-sm text-ink outline-none transition focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2",
+          "min-h-12 w-full rounded-2xl border px-4 py-3 text-sm text-ink outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2",
           error ? "border-red-300 bg-red-50/40" : "border-slate-200 bg-white",
         )}
       />
@@ -749,7 +751,7 @@ function FieldTextArea({
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errorId : undefined}
         className={clsx(
-          "min-h-32 w-full rounded-2xl border px-4 py-3 text-sm text-ink outline-none transition focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2",
+          "min-h-32 w-full rounded-2xl border px-4 py-3 text-sm text-ink outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2",
           error ? "border-red-300 bg-red-50/40" : "border-slate-200 bg-white",
         )}
       />

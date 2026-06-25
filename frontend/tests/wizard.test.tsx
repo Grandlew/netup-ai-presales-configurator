@@ -204,7 +204,7 @@ describe("Wizard", () => {
     resolveRecommend(recommendationResponse);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Project summary" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: recommendationResponse.project_summary })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Request engineering review" })).toBeInTheDocument();
     });
   });
@@ -234,7 +234,7 @@ describe("Wizard", () => {
     await fillContactDetails(user);
     await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
 
-    await screen.findByRole("heading", { name: "Project summary" });
+    await screen.findByRole("heading", { name: recommendationResponse.project_summary });
     await user.click(screen.getAllByRole("button", { name: "Start over" })[0]);
     await user.click(screen.getByRole("button", { name: "Confirm start over" }));
 
@@ -260,6 +260,40 @@ describe("Wizard", () => {
     expect(screen.getAllByRole("button", { name: /Profile|Sources|Services|Delivery|Capacity|Contact|Results/i })).toHaveLength(14);
     expect(screen.queryByText(options.disclaimer)).not.toBeInTheDocument();
   }, 10000);
+
+  it("renders recommendation cards, capacity cards, and missing information on the results page", async () => {
+    const user = userEvent.setup();
+    render(<Wizard options={options} />);
+
+    await goToContactStep(user);
+    await fillContactDetails(user);
+    await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
+
+    expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Missing information" })).toBeInTheDocument();
+    expect(screen.getByText("NetUP IPTV Combine 8x")).toBeInTheDocument();
+    expect(screen.getByText("806.4 Mbps")).toBeInTheDocument();
+  });
+
+  it("retries recommendation generation after an API failure and preserves state", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.recommend)
+      .mockRejectedValueOnce(new Error("Backend offline"))
+      .mockResolvedValueOnce(recommendationResponse);
+
+    render(<Wizard options={options} />);
+    await goToContactStep(user);
+    await fillContactDetails(user);
+
+    await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
+    expect(await screen.findByRole("button", { name: "Retry" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByRole("heading", { name: recommendationResponse.project_summary })).toBeInTheDocument();
+    expect(api.recommend).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("ConversationPanel", () => {
@@ -271,13 +305,10 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          "Natural-language intake is currently unavailable because the AI service is not configured. The guided configurator remains fully available.",
-        ),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
     });
 
+    expect(screen.getByText("You can continue with the guided configurator.")).toBeInTheDocument();
     expect(screen.getByText("Extracted fields")).toBeInTheDocument();
     expect(screen.getByText("Follow-up question")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeInTheDocument();

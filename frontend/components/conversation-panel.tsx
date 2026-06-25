@@ -43,7 +43,7 @@ export function ConversationPanel({
   const trimmedMessage = message.trim();
 
   const handleSubmit = async () => {
-    if (!trimmedMessage || aiUnavailable) return;
+    if (!trimmedMessage || aiUnavailable || loading) return;
 
     setLoading(true);
     setError(null);
@@ -54,8 +54,9 @@ export function ConversationPanel({
       });
       setResponse(result);
       setAiUnavailable(!result.ai_available);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Conversation request failed.");
+      setError("We could not extract requirements from this description. Please try again or continue with the guided configurator.");
     } finally {
       setLoading(false);
     }
@@ -64,18 +65,18 @@ export function ConversationPanel({
   return (
     <div className="panel p-5 md:p-6">
       <p className="text-sm uppercase tracking-[0.24em] text-blue">Describe My Project</p>
-      <h2 className="mt-2 text-2xl font-semibold text-ink">Natural-language intake</h2>
+      <h2 className="mt-2 text-[1.7rem] font-semibold text-ink">Natural-language intake</h2>
       <p className="mt-2 text-sm text-slate-600">
         Describe your project in plain language. The AI layer only extracts requirements and asks follow-up questions.
       </p>
 
-      <label htmlFor="conversation-message" className="mt-6 block text-sm font-medium text-ink">
+      <label htmlFor="conversation-message" className="mt-5 block text-sm font-medium text-ink">
         Project description
       </label>
       <textarea
         id="conversation-message"
         maxLength={MAX_MESSAGE_LENGTH}
-        className="mt-2 min-h-40 w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 outline-none transition focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+        className="mt-2 min-h-36 w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
         placeholder="We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs, plus catch-up TV and mobile viewing."
         value={message}
         onChange={(event) => setMessage(event.target.value)}
@@ -86,8 +87,9 @@ export function ConversationPanel({
       </div>
 
       {aiUnavailable ? (
-        <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700" aria-live="polite">
-          Natural-language intake is currently unavailable because the AI service is not configured. The guided configurator remains fully available.
+        <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700" aria-live="polite" role="status">
+          <p>Natural-language intake is currently unavailable because the AI service is not configured.</p>
+          <p className="mt-1 text-slate-600">You can continue with the guided configurator.</p>
         </div>
       ) : null}
 
@@ -121,7 +123,7 @@ export function ConversationPanel({
       </div>
 
       {response ? (
-        <div className="mt-6 space-y-4">
+        <div className="mt-5 space-y-4">
           <div className="rounded-2xl bg-paper p-4 text-sm text-slate-700">
             <h3 className="text-base font-semibold text-ink">Extracted fields</h3>
             {extractedEntries.length ? (
