@@ -13,10 +13,11 @@
 body {
   background: linear-gradient(180deg, #f4f8fd 0%, #ffffff 25%, #f7fafc 100%);
   color: var(--foreground);
+  overflow-x: clip;
 }
 
 .shell {
-  @apply mx-auto max-w-7xl px-6 py-8 md:px-10 lg:px-12;
+  @apply mx-auto w-full max-w-[1240px] px-5 py-8 md:px-8 lg:px-10;
 }
 
 .panel {

@@ -41,6 +41,8 @@ const steps = [
   },
 ] as const;
 
+const stepTitlesCompact = ["Profile", "Sources", "Services", "Delivery", "Capacity", "Contact", "Results"] as const;
+
 const stepFields: Array<FieldPath<WizardFormValues>[]> = [
   ["project_type", "subscribers_or_rooms"],
   ["number_of_channels", "signal_sources"],
@@ -268,16 +270,17 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
       reportHtml,
       leadSaved: Boolean(leadId),
     }),
-    [leadId, reportHtml, savingLead, recommendation],
+    [leadId, reportHtml, savingLead],
   );
 
   return (
     <div className="space-y-6">
-      <div className="panel p-5 md:p-6">
-        <div className="hidden items-start gap-3 lg:flex" aria-label="Wizard progress">
+      <div className="panel overflow-hidden p-5 md:p-6">
+        <div className="hidden gap-2 xl:grid xl:grid-cols-7" aria-label="Wizard progress" data-testid="desktop-progress">
           {steps.map((item, index) => {
             const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
             const canNavigate = index <= maxUnlockedStep;
+            const statusLabel = status === "complete" ? "Done" : status === "current" ? "Current" : "";
 
             return (
               <button
@@ -287,7 +290,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
                 disabled={!canNavigate}
                 aria-current={index === step ? "step" : undefined}
                 className={clsx(
-                  "flex min-w-0 flex-1 items-center gap-3 rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
+                  "flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
                   status === "complete" && "border-blue/30 bg-paper text-ink",
                   status === "current" && "border-ink bg-ink text-white shadow-[0_10px_30px_rgba(16,35,61,0.18)]",
                   status === "future" && "border-slate-200 bg-white text-slate-400",
@@ -305,27 +308,63 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
                   {status === "complete" ? "✓" : index + 1}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold">{item.title}</span>
-                  <span className={clsx("block truncate text-xs", status === "current" ? "text-blue-100" : "text-slate-500")}>
-                    {status === "complete" ? "Completed" : status === "current" ? "Current step" : "Upcoming"}
-                  </span>
+                  <span className="block text-[13px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
+                  {statusLabel ? (
+                    <span className={clsx("mt-0.5 block text-[11px] leading-tight", status === "current" ? "text-blue-100" : "text-slate-500")}>
+                      {statusLabel}
+                    </span>
+                  ) : null}
                 </span>
               </button>
             );
           })}
         </div>
 
-        <div className="space-y-3 lg:hidden">
-          <div className="flex items-center justify-between text-sm font-medium text-ink">
+        <div className="hidden grid-cols-2 gap-2 lg:grid xl:hidden" aria-label="Wizard progress" data-testid="desktop-progress-compact">
+          {steps.map((item, index) => {
+            const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
+            const canNavigate = index <= maxUnlockedStep;
+
+            return (
+              <button
+                key={`${item.title}-compact`}
+                type="button"
+                onClick={() => goToStep(index)}
+                disabled={!canNavigate}
+                aria-current={index === step ? "step" : undefined}
+                className={clsx(
+                  "flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
+                  status === "complete" && "border-blue/30 bg-paper text-ink",
+                  status === "current" && "border-ink bg-ink text-white shadow-[0_10px_30px_rgba(16,35,61,0.18)]",
+                  status === "future" && "border-slate-200 bg-white text-slate-400",
+                )}
+              >
+                <span
+                  className={clsx(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                    status === "complete" && "border-blue/30 bg-white text-blue",
+                    status === "current" && "border-white/30 bg-white/10 text-white",
+                    status === "future" && "border-slate-200 bg-slate-50 text-slate-400",
+                  )}
+                  aria-hidden="true"
+                >
+                  {status === "complete" ? "✓" : index + 1}
+                </span>
+                <span className="min-w-0 text-[13px] font-semibold leading-tight text-current">{item.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-3 lg:hidden" data-testid="compact-progress">
+          <div className="flex items-center justify-between gap-3 text-sm font-medium text-ink">
             <span>{`Step ${step + 1} of ${steps.length}`}</span>
-            <span>{currentStep.title}</span>
+            <span className="text-right">{currentStep.title}</span>
           </div>
           <div className="h-2 rounded-full bg-paper" aria-hidden="true">
             <div className="h-2 rounded-full bg-ink transition-all" style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
-
-        <p className="mt-5 max-w-3xl text-sm text-slate-600">{options.disclaimer}</p>
       </div>
 
       {banner ? (

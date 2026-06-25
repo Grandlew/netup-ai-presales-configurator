@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
+import HomePage from "@/app/page";
 import { ConversationPanel } from "@/components/conversation-panel";
 import { Wizard } from "@/components/wizard";
 import { api } from "@/lib/api";
@@ -11,6 +12,7 @@ import type { ConfigOptionsResponse } from "@/lib/types";
 
 vi.mock("@/lib/api", () => ({
   api: {
+    options: vi.fn(),
     recommend: vi.fn(),
     createLead: vi.fn(),
     createReport: vi.fn(),
@@ -67,6 +69,7 @@ const recommendationResponse = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(api.options).mockResolvedValue(options);
   vi.mocked(api.recommend).mockResolvedValue(recommendationResponse);
   vi.mocked(api.createLead).mockResolvedValue({ id: "lead-1" });
   vi.mocked(api.createReport).mockResolvedValue({ id: "report-1", generated_content: "<html><body>Report</body></html>" });
@@ -158,9 +161,9 @@ describe("Wizard", () => {
     await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
     await user.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(screen.getByRole("button", { name: /Required services Upcoming/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Required services$/i })).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: /Project profile Completed/i }));
+    await user.click(screen.getByRole("button", { name: /^Project profile$/i }));
 
     expect(screen.getByRole("heading", { name: "Project profile" })).toBeInTheDocument();
   });
@@ -245,7 +248,18 @@ describe("Wizard", () => {
 
     expect(screen.getByText("Step 1 of 7")).toBeInTheDocument();
     expect(screen.getAllByText("Project profile").length).toBeGreaterThan(0);
-  });
+  }, 10000);
+
+  it("renders all seven progress steps without repeating the long disclaimer", () => {
+    const { container } = render(<Wizard options={options} />);
+
+    expect(screen.getByTestId("desktop-progress")).toHaveClass("xl:grid-cols-7");
+    expect(screen.getByTestId("desktop-progress-compact")).toHaveClass("lg:grid", "xl:hidden");
+    expect(container.firstChild).toHaveClass("space-y-6");
+    expect(screen.getByTestId("desktop-progress").parentElement).toHaveClass("overflow-hidden");
+    expect(screen.getAllByRole("button", { name: /Profile|Sources|Services|Delivery|Capacity|Contact|Results/i })).toHaveLength(14);
+    expect(screen.queryByText(options.disclaimer)).not.toBeInTheDocument();
+  }, 10000);
 });
 
 describe("ConversationPanel", () => {
@@ -268,5 +282,18 @@ describe("ConversationPanel", () => {
     expect(screen.getByText("Follow-up question")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
+  });
+});
+
+describe("HomePage layout", () => {
+  it("keeps a single hero disclaimer and uses the constrained shell width", async () => {
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    expect(document.querySelector("main")).toHaveClass("shell");
+    expect(screen.getAllByText(options.disclaimer)).toHaveLength(1);
   });
 });

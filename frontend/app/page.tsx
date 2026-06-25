@@ -25,10 +25,10 @@ export default function HomePage() {
 
   return (
     <main className="shell">
-      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-        <div id="guided-configurator" className="space-y-6">
+      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.16fr)_minmax(320px,0.84fr)]">
+        <div id="guided-configurator" className="min-w-0 space-y-6">
           <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
-          <h1 className="max-w-4xl font-serif text-5xl leading-tight text-ink md:text-6xl">
+          <h1 className="max-w-4xl font-serif text-4xl leading-tight text-ink md:text-5xl xl:text-6xl">
             Design Your IPTV or OTT Solution
           </h1>
           <p className="max-w-3xl text-lg text-slate-600">
@@ -47,7 +47,7 @@ export default function HomePage() {
             <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
           )}
         </div>
-        <aside className="space-y-6">
+        <aside className="min-w-0 space-y-6">
           <ConversationPanel
             onUseGuidedConfigurator={focusWizard}
             resetSignal={conversationResetSignal}
