@@ -4,12 +4,34 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
-from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, AuthenticationError, RateLimitError
 from pydantic import ValidationError
 
 from app.schemas import AIExtractionPayload, ConversationExtractResponse, PartialCustomerRequirements
 from app.services.requirements import missing_required_fields, next_question_for
 from app.settings import get_settings
+
+try:
+    from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, AuthenticationError, RateLimitError
+
+    OPENAI_SDK_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover - exercised in runtime environments without the SDK
+    AsyncOpenAI = None
+    OPENAI_SDK_AVAILABLE = False
+
+    class APIConnectionError(Exception):
+        pass
+
+    class APIStatusError(Exception):
+        pass
+
+    class APITimeoutError(Exception):
+        pass
+
+    class AuthenticationError(Exception):
+        pass
+
+    class RateLimitError(Exception):
+        pass
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +66,7 @@ class ConversationExtractor:
 
     @property
     def enabled(self) -> bool:
-        return bool(self.settings.openai_api_key)
+        return bool(self.settings.openai_api_key) and OPENAI_SDK_AVAILABLE
 
     def _safe_log_context(self, message: str, current: PartialCustomerRequirements) -> dict[str, Any]:
         context: dict[str, Any] = {
@@ -165,7 +187,11 @@ class ConversationExtractor:
                 current=current,
                 ai_available=False,
                 error_code="ai_not_configured",
-                message="Natural-language intake is currently unavailable because the AI service is not configured.",
+                message=(
+                    "Natural-language intake is currently unavailable because the AI service is not configured."
+                    if not self.settings.openai_api_key
+                    else "Natural-language intake is currently unavailable because the AI client dependency is not installed on the server."
+                ),
             )
 
         try:
