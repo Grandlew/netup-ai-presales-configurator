@@ -33,6 +33,7 @@ cmd /c npm run dev
 ```
 
 Backend runs at `http://127.0.0.1:8000`
+check `http://127.0.0.1:8000/docs`
 Frontend runs at `http://127.0.0.1:3000`
 
 ## Environment variables
