@@ -136,6 +136,45 @@ class PartialCustomerRequirements(BaseModel):
     additional_project_notes: str | None = None
 
 
+class AIExtractedRequirements(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    project_type: ProjectType | None = None
+    country: str | None = None
+    company_name: str | None = None
+    subscribers_or_rooms: int | None = Field(default=None, gt=0, le=10_000_000)
+    expected_concurrent_viewers: int | None = Field(default=None, gt=0)
+    number_of_channels: int | None = Field(default=None, gt=0, le=20_000)
+    signal_sources: list[SignalSource] = Field(default_factory=list)
+    signal_source_details: dict[str, str] = Field(default_factory=dict)
+    services: list[Service] = Field(default_factory=list)
+    viewer_devices: list[ViewerDevice] = Field(default_factory=list)
+    delivery_mode: DeliveryMode | None = None
+    output_type: OutputType | None = None
+    adaptive_bitrate_required: bool | None = None
+    redundancy_required: bool | None = None
+    available_storage_tb: float | None = Field(default=None, ge=0)
+    archive_days: int | None = Field(default=None, ge=0, le=3650)
+    average_channel_bitrate_mbps: float | None = Field(default=None, gt=0, le=100)
+    estimated_vod_library_size_tb: float | None = Field(default=None, ge=0)
+    need_subscriber_packages: bool | None = None
+    need_local_advertising: bool | None = None
+    existing_network_bandwidth_mbps: float | None = Field(default=None, ge=0)
+    existing_equipment: str | None = None
+    budget_range: str | None = None
+    target_launch_date: str | None = None
+    contact_name: str | None = None
+    company: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    additional_project_notes: str | None = None
+
+
+class AIExtractionPayload(BaseModel):
+    extracted_requirements: AIExtractedRequirements
+    next_question: str | None = None
+
+
 class ProductRecommendation(BaseModel):
     product: str
     category: str
@@ -193,7 +232,9 @@ class ConversationExtractResponse(BaseModel):
     next_question: str | None
     ready_for_recommendation: bool
     ai_available: bool
-    ai_unavailable_reason: str | None = None
+    extraction_succeeded: bool
+    error_code: str | None = None
+    message: str | None = None
 
 
 class LeadCreateRequest(BaseModel):

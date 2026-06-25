@@ -42,5 +42,7 @@ export type ExtractResponse = {
   next_question: string | null;
   ready_for_recommendation: boolean;
   ai_available: boolean;
-  ai_unavailable_reason?: "not_configured" | "upstream_unavailable" | null;
+  extraction_succeeded: boolean;
+  error_code?: string | null;
+  message?: string | null;
 };

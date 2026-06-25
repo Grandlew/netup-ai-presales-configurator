@@ -1,9 +1,6 @@
-import httpx
 import os
 
-from app.dependencies import get_extractor
 from app.schemas import CustomerRequirements
-from app.services.ai_extractor import ConversationExtractor
 from app.settings import get_settings
 
 
@@ -41,7 +38,7 @@ def test_recommend_endpoint(client):
     assert response.json()["recommendations"]
 
 
-def test_conversation_extract_fallback_without_key(client):
+def test_conversation_extract_reports_not_configured_when_api_key_missing(client):
     original_key = os.environ.get("OPENAI_API_KEY")
     os.environ["OPENAI_API_KEY"] = ""
     get_settings.cache_clear()
@@ -61,43 +58,10 @@ def test_conversation_extract_fallback_without_key(client):
     assert response.status_code == 200
     body = response.json()
     assert body["ai_available"] is False
-    assert body["ai_unavailable_reason"] == "not_configured"
-    assert body["next_question"]
-
-
-def test_conversation_extract_fallback_when_upstream_ai_request_fails(client):
-    class FailingExtractor(ConversationExtractor):
-        @property
-        def enabled(self) -> bool:
-            return True
-
-        async def extract(self, message, current):
-            return await super().extract(message, current)
-
-    original_post = httpx.AsyncClient.post
-
-    async def failing_post(self, *args, **kwargs):
-        request = httpx.Request("POST", "https://api.openai.com/v1/responses")
-        response = httpx.Response(status_code=400, request=request, json={"error": {"message": "Unknown model"}})
-        raise httpx.HTTPStatusError("Bad Request", request=request, response=response)
-
-    client.app.dependency_overrides[get_extractor] = FailingExtractor
-    httpx.AsyncClient.post = failing_post
-
-    try:
-        response = client.post(
-            "/api/conversation/extract",
-            json={"message": "We have a 180-room hotel with 85 satellite channels.", "current_requirements": {}},
-        )
-    finally:
-        client.app.dependency_overrides.pop(get_extractor, None)
-        httpx.AsyncClient.post = original_post
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["ai_available"] is False
-    assert body["ai_unavailable_reason"] == "upstream_unavailable"
-    assert body["next_question"]
+    assert body["extraction_succeeded"] is False
+    assert body["error_code"] == "ai_not_configured"
+    assert body["message"] == "Natural-language intake is currently unavailable because the AI service is not configured."
+    assert body["next_question"] is None
 
 
 def test_catalog_and_config_endpoints(client):

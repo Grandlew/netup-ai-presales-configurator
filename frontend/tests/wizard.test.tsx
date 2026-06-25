@@ -117,12 +117,17 @@ beforeEach(() => {
   vi.mocked(api.createLead).mockResolvedValue({ id: "lead-1" });
   vi.mocked(api.createReport).mockResolvedValue({ id: "report-1", generated_content: "<html><body>Report</body></html>" });
   vi.mocked(api.extract).mockResolvedValue({
-    extracted_requirements: {},
-    missing_required_fields: ["Project type"],
-    next_question: "What type of project is this?",
+    extracted_requirements: {
+      project_type: "hotel",
+      subscribers_or_rooms: 180,
+    },
+    missing_required_fields: ["Number of channels"],
+    next_question: "How many TV channels do you expect to distribute?",
     ready_for_recommendation: false,
-    ai_available: false,
-    ai_unavailable_reason: "not_configured",
+    ai_available: true,
+    extraction_succeeded: true,
+    error_code: null,
+    message: null,
   });
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
 });
@@ -342,8 +347,123 @@ describe("Wizard", () => {
 });
 
 describe("ConversationPanel", () => {
-  it("shows the AI unavailable fallback and keeps the guided path visible", async () => {
+  it("renders only successfully extracted fields with human-readable labels", async () => {
     const user = userEvent.setup();
+    render(<ConversationPanel />);
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Extracted fields")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Project type")).toBeInTheDocument();
+    expect(screen.getByText("Hotel")).toBeInTheDocument();
+    expect(screen.getByText("Rooms or subscribers")).toBeInTheDocument();
+    expect(screen.queryByText("Country")).not.toBeInTheDocument();
+    expect(screen.getByText("Missing required information")).toBeInTheDocument();
+    expect(screen.getByText("Follow-up question")).toBeInTheDocument();
+    expect(screen.getByText("How many TV channels do you expect to distribute?")).toBeInTheDocument();
+  });
+
+  it("keeps the guided configurator available after a failed extraction and preserves textarea content", async () => {
+    const user = userEvent.setup();
+    const onUseGuidedConfigurator = vi.fn();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {},
+      missing_required_fields: [],
+      next_question: null,
+      ready_for_recommendation: false,
+      ai_available: true,
+      extraction_succeeded: false,
+      error_code: "openai_request_failed",
+      message: "We could not extract the project requirements. Please try again.",
+    });
+
+    render(<ConversationPanel onUseGuidedConfigurator={onUseGuidedConfigurator} />);
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project with LG TVs");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("We could not extract the project requirements. Please try again.")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Extracted fields")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/We have a 180-room hotel/i)).toHaveValue("Hotel project with LG TVs");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+    expect(onUseGuidedConfigurator).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries after a failed extraction request", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {},
+      missing_required_fields: [],
+      next_question: null,
+      ready_for_recommendation: false,
+      ai_available: true,
+      extraction_succeeded: false,
+      error_code: "openai_timeout",
+      message: "The extraction request timed out. Please try again.",
+    });
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {
+        project_type: "hotel",
+        signal_source_details: {
+          smart_tv_brand: "LG",
+        },
+        signal_sources: ["ip_streams"],
+        services: ["catchup_tv"],
+      },
+      missing_required_fields: ["Rooms or subscribers"],
+      next_question: "How many subscribers, rooms, screens, or endpoints do you plan to serve?",
+      ready_for_recommendation: false,
+      ai_available: true,
+      extraction_succeeded: true,
+      error_code: null,
+      message: null,
+    });
+
+    render(<ConversationPanel />);
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("The extraction request timed out. Please try again.")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Signal source details")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+    expect(screen.getByText("Smart Tv Brand")).toBeInTheDocument();
+    expect(screen.getByText("LG")).toBeInTheDocument();
+    expect(screen.getByText("Existing IP streams")).toBeInTheDocument();
+    expect(screen.getByText("Catch-up TV")).toBeInTheDocument();
+  });
+
+  it("shows AI unavailable only when the service is not configured", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {},
+      missing_required_fields: [],
+      next_question: null,
+      ready_for_recommendation: false,
+      ai_available: false,
+      extraction_succeeded: false,
+      error_code: "ai_not_configured",
+      message: "Natural-language intake is currently unavailable because the AI service is not configured.",
+    });
+
     render(<ConversationPanel />);
 
     await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
@@ -354,40 +474,20 @@ describe("ConversationPanel", () => {
     });
 
     expect(screen.getByText("You can continue with the guided configurator.")).toBeInTheDocument();
-    expect(screen.getByText("Extracted fields")).toBeInTheDocument();
-    expect(screen.getByText("Follow-up question")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
   });
 
-  it("keeps the guided button enabled when AI is unavailable", async () => {
-    const user = userEvent.setup();
-    const onUseGuidedConfigurator = vi.fn();
-    render(<ConversationPanel onUseGuidedConfigurator={onUseGuidedConfigurator} />);
-
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeEnabled();
-
-    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
-    expect(onUseGuidedConfigurator).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows a precise upstream-unavailable message when AI service calls fail", async () => {
+  it("does not show AI unavailable when the AI is configured but the request fails", async () => {
     const user = userEvent.setup();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
-      missing_required_fields: ["Project type"],
-      next_question: "What type of project is this?",
+      missing_required_fields: [],
+      next_question: null,
       ready_for_recommendation: false,
-      ai_available: false,
-      ai_unavailable_reason: "upstream_unavailable",
+      ai_available: true,
+      extraction_succeeded: false,
+      error_code: "openai_request_failed",
+      message: "We could not extract the project requirements. Please try again.",
     });
 
     render(<ConversationPanel />);
@@ -396,8 +496,11 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service could not be reached right now.")).toBeInTheDocument();
+      expect(screen.getByText("We could not extract the project requirements. Please try again.")).toBeInTheDocument();
     });
+
+    expect(screen.queryByText("Natural-language intake is currently unavailable because the AI service is not configured.")).not.toBeInTheDocument();
+    expect(screen.queryByText("You can continue with the guided configurator.")).not.toBeInTheDocument();
   });
 });
 

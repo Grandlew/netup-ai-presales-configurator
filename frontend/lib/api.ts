@@ -2,6 +2,18 @@ import type { ConfigOptionsResponse, ExtractResponse, Recommendation } from "@/l
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
+export class ApiError extends Error {
+  status: number;
+  code: string | null;
+
+  constructor(message: string, status: number, code: string | null = null) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -17,18 +29,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       detail: "Request failed",
     }));
 
-    const detail =
-      typeof error.detail === "string"
-        ? error.detail
-        : JSON.stringify(error.detail, null, 2);
+    const detail = typeof error.detail === "string" ? error.detail : "Request failed";
+    const code = typeof error.error_code === "string" ? error.error_code : null;
 
     console.error("API request failed", {
       path,
       status: response.status,
-      error,
+      code,
+      detail,
     });
 
-    throw new Error(`${response.status}: ${detail}`);
+    throw new ApiError(detail, response.status, code);
   }
 
   return response.json() as Promise<T>;
