@@ -16,7 +16,7 @@ class Settings:
         self.cors_origins = [origin.strip()
                              for origin in raw_origins.split(",") if origin.strip()]
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5.5")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
         self.rate_limit_requests = int(os.getenv("RATE_LIMIT_REQUESTS", "60"))
         self.rate_limit_window_seconds = int(
             os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
