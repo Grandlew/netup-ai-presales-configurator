@@ -193,6 +193,7 @@ class ConversationExtractResponse(BaseModel):
     next_question: str | None
     ready_for_recommendation: bool
     ai_available: bool
+    ai_unavailable_reason: str | None = None
 
 
 class LeadCreateRequest(BaseModel):

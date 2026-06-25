@@ -18,7 +18,7 @@ class ConversationExtractor:
     def enabled(self) -> bool:
         return bool(self.settings.openai_api_key)
 
-    def _fallback_response(self, current: PartialCustomerRequirements) -> ConversationExtractResponse:
+    def _fallback_response(self, current: PartialCustomerRequirements, reason: str) -> ConversationExtractResponse:
         missing = missing_required_fields(current)
         return ConversationExtractResponse(
             extracted_requirements=current,
@@ -26,6 +26,7 @@ class ConversationExtractor:
             next_question=next_question_for(current),
             ready_for_recommendation=not missing,
             ai_available=False,
+            ai_unavailable_reason=reason,
         )
 
     async def extract(self, message: str, current: PartialCustomerRequirements | None) -> ConversationExtractResponse:
@@ -34,7 +35,7 @@ class ConversationExtractor:
 
         current = current or PartialCustomerRequirements()
         if not self.enabled:
-            return self._fallback_response(current)
+            return self._fallback_response(current, "not_configured")
 
         payload = {
             "model": self.settings.openai_model,
@@ -85,7 +86,7 @@ class ConversationExtractor:
                 response.raise_for_status()
                 body = response.json()
         except httpx.HTTPError:
-            return self._fallback_response(current)
+            return self._fallback_response(current, "upstream_unavailable")
 
         output_text = body.get("output_text")
         if not output_text:
@@ -116,4 +117,5 @@ class ConversationExtractor:
             next_question=next_question,
             ready_for_recommendation=not missing,
             ai_available=True,
+            ai_unavailable_reason=None,
         )

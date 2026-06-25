@@ -1,8 +1,10 @@
 import httpx
+import os
 
 from app.dependencies import get_extractor
 from app.schemas import CustomerRequirements
 from app.services.ai_extractor import ConversationExtractor
+from app.settings import get_settings
 
 
 def sample_payload() -> dict:
@@ -40,13 +42,26 @@ def test_recommend_endpoint(client):
 
 
 def test_conversation_extract_fallback_without_key(client):
-    response = client.post(
-        "/api/conversation/extract",
-        json={"message": "We have a 180-room hotel with 85 satellite channels.", "current_requirements": {}},
-    )
+    original_key = os.environ.get("OPENAI_API_KEY")
+    os.environ["OPENAI_API_KEY"] = ""
+    get_settings.cache_clear()
+
+    try:
+        response = client.post(
+            "/api/conversation/extract",
+            json={"message": "We have a 180-room hotel with 85 satellite channels.", "current_requirements": {}},
+        )
+    finally:
+        if original_key is None:
+            os.environ.pop("OPENAI_API_KEY", None)
+        else:
+            os.environ["OPENAI_API_KEY"] = original_key
+        get_settings.cache_clear()
+
     assert response.status_code == 200
     body = response.json()
     assert body["ai_available"] is False
+    assert body["ai_unavailable_reason"] == "not_configured"
     assert body["next_question"]
 
 
@@ -81,6 +96,7 @@ def test_conversation_extract_fallback_when_upstream_ai_request_fails(client):
     assert response.status_code == 200
     body = response.json()
     assert body["ai_available"] is False
+    assert body["ai_unavailable_reason"] == "upstream_unavailable"
     assert body["next_question"]
 
 

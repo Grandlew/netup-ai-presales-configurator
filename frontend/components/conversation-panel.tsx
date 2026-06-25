@@ -18,6 +18,17 @@ function renderExtractedValue(value: unknown) {
   return String(value);
 }
 
+function getAiUnavailableMessage(reason: ExtractResponse["ai_unavailable_reason"]) {
+  switch (reason) {
+    case "not_configured":
+      return "Natural-language intake is currently unavailable because the AI service is not configured.";
+    case "upstream_unavailable":
+      return "Natural-language intake is currently unavailable because the AI service could not be reached right now.";
+    default:
+      return "Natural-language intake is currently unavailable because the AI service is not available right now.";
+  }
+}
+
 export function ConversationPanel({
   onUseGuidedConfigurator,
   resetSignal = 0,
@@ -41,6 +52,7 @@ export function ConversationPanel({
 
   const extractedEntries = useMemo(() => Object.entries(response?.extracted_requirements ?? {}), [response]);
   const trimmedMessage = message.trim();
+  const aiUnavailableMessage = getAiUnavailableMessage(response?.ai_unavailable_reason);
 
   const handleSubmit = async () => {
     if (!trimmedMessage || aiUnavailable || loading) return;
@@ -88,7 +100,7 @@ export function ConversationPanel({
 
       {aiUnavailable ? (
         <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700" aria-live="polite" role="status">
-          <p>Natural-language intake is currently unavailable because the AI service is not available right now.</p>
+          <p>{aiUnavailableMessage}</p>
           <p className="mt-1 text-slate-600">You can continue with the guided configurator.</p>
         </div>
       ) : null}

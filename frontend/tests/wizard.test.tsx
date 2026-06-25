@@ -122,6 +122,7 @@ beforeEach(() => {
     next_question: "What type of project is this?",
     ready_for_recommendation: false,
     ai_available: false,
+    ai_unavailable_reason: "not_configured",
   });
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
 });
@@ -349,7 +350,7 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not available right now.")).toBeInTheDocument();
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
     });
 
     expect(screen.getByText("You can continue with the guided configurator.")).toBeInTheDocument();
@@ -368,7 +369,7 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not available right now.")).toBeInTheDocument();
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
@@ -376,6 +377,27 @@ describe("ConversationPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
     expect(onUseGuidedConfigurator).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a precise upstream-unavailable message when AI service calls fail", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {},
+      missing_required_fields: ["Project type"],
+      next_question: "What type of project is this?",
+      ready_for_recommendation: false,
+      ai_available: false,
+      ai_unavailable_reason: "upstream_unavailable",
+    });
+
+    render(<ConversationPanel />);
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service could not be reached right now.")).toBeInTheDocument();
+    });
   });
 });
 
