@@ -13,8 +13,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Request failed" }));
-    throw new Error(error.detail ?? "Request failed");
+    const error = await response.json().catch(() => ({
+      detail: "Request failed",
+    }));
+
+    const detail =
+      typeof error.detail === "string"
+        ? error.detail
+        : JSON.stringify(error.detail, null, 2);
+
+    console.error("API request failed", {
+      path,
+      status: response.status,
+      error,
+    });
+
+    throw new Error(`${response.status}: ${detail}`);
   }
 
   return response.json() as Promise<T>;
@@ -29,5 +43,8 @@ export const api = {
   createLead: (body: Record<string, unknown>) =>
     request<{ id: string }>("/api/leads", { method: "POST", body: JSON.stringify(body) }),
   createReport: (body: Record<string, unknown>) =>
-    request<{ id: string; generated_content: string }>("/api/reports", { method: "POST", body: JSON.stringify(body) }),
+    request<{ id: string; generated_content: string }>("/api/reports", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };
