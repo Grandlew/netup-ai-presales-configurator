@@ -1,0 +1,32 @@
+{
+  "project_type": "hotel",
+  "country": "United States",
+  "subscribers_or_rooms": 180,
+  "expected_concurrent_viewers": 100,
+  "number_of_channels": 85,
+  "signal_sources": [
+    "satellite",
+    "ip_streams"
+  ],
+  "services": [
+    "live_tv",
+    "epg",
+    "catchup_tv",
+    "video_on_demand"
+  ],
+  "viewer_devices": [
+    "smart_tv",
+    "mobile"
+  ],
+  "delivery_mode": "both",
+  "output_type": "ip",
+  "adaptive_bitrate_required": true,
+  "redundancy_required": false,
+  "available_storage_tb": 100,
+  "archive_days": 7,
+  "average_channel_bitrate_mbps": 6,
+  "budget_range": "To be discussed",
+  "target_launch_date": "2026-Q4",
+  "contact_name": "Demo Customer",
+  "company": "Example Hotel"
+}

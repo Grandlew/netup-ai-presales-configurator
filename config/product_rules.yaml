@@ -1,0 +1,176 @@
+version: "2026.06-mvp"
+notes: "All rule thresholds are provisional and require NetUP validation."
+rules:
+  - rule_id: "core-combine-mini"
+    product_family: "NetUP IPTV Combine Mini"
+    category: "Core IPTV platform"
+    enabled: true
+    conditions:
+      subscribers_or_rooms:
+        max: 50
+      number_of_channels:
+        max: 50
+      delivery_mode:
+        in: ["local_network"]
+    recommendation_reason: "Compact local deployment within the current provisional room and channel sizing rule."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "core-combine-8x"
+    product_family: "NetUP IPTV Combine 8x"
+    category: "Core IPTV platform"
+    enabled: true
+    conditions:
+      subscribers_or_rooms:
+        max: 1000
+      number_of_channels:
+        max: 100
+    recommendation_reason: "Medium-size IPTV deployment within the MVP's provisional sizing rules."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "core-combine-16x"
+    product_family: "NetUP IPTV Combine 16x"
+    category: "Core IPTV platform"
+    enabled: true
+    conditions:
+      subscribers_or_rooms:
+        max: 1000
+      number_of_channels:
+        min: 101
+    recommendation_reason: "The channel count exceeds the provisional Combine 8x rule."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "core-complex"
+    product_family: "NetUP IPTV/OTT Complex"
+    category: "Core IPTV/OTT platform"
+    enabled: true
+    conditions:
+      subscribers_or_rooms:
+        min: 1001
+    recommendation_reason: "The project exceeds the all-in-one sizing boundary and needs a scalable operator architecture."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "headend-dvb-ip"
+    product_family: "NetUP DVB-IP Streamer"
+    category: "Headend"
+    enabled: true
+    conditions:
+      signal_sources:
+        contains_any: ["satellite", "terrestrial", "cable"]
+    recommendation_reason: "DVB signals must be received and converted into IP streams."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "headend-asi"
+    product_family: "NetUP Streamer ASI 8x"
+    category: "Headend"
+    enabled: true
+    conditions:
+      signal_sources:
+        contains_any: ["asi"]
+    recommendation_reason: "ASI inputs require integration with an IP-based distribution platform."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "encoding-hdmi-sdi"
+    product_family: "NetUP Encoder family"
+    category: "Encoding"
+    enabled: true
+    conditions:
+      signal_sources:
+        contains_any: ["hdmi_sdi"]
+    recommendation_reason: "HDMI/SDI sources require encoding before IP distribution."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "processing-stream-processor"
+    product_family: "NetUP Stream Processor"
+    category: "Media processing"
+    enabled: true
+    conditions:
+      delivery_mode:
+        in: ["internet_ott", "both"]
+    recommendation_reason: "OTT delivery requires stream processing and packaging."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "processing-adaptive"
+    product_family: "NetUP Stream Processor"
+    category: "Media processing"
+    enabled: true
+    conditions:
+      adaptive_bitrate_required:
+        equals: true
+    recommendation_reason: "Adaptive bitrate delivery requires media processing."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "processing-mobile-web"
+    product_family: "NetUP Stream Processor"
+    category: "Media processing"
+    enabled: true
+    conditions:
+      viewer_devices:
+        contains_any: ["mobile", "web_browser"]
+    recommendation_reason: "Mobile or browser viewing generally requires OTT-oriented processing."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "processing-catchup"
+    product_family: "NetUP Stream Processor"
+    category: "Media processing"
+    enabled: true
+    conditions:
+      services:
+        contains_any: ["catchup_tv", "time_shift"]
+    recommendation_reason: "Catch-up TV or time-shift requires recording and processing workflows."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "qam-output"
+    product_family: "NetUP Streamer xC"
+    category: "QAM output"
+    enabled: true
+    conditions:
+      output_type:
+        in: ["dvb_c_qam"]
+    recommendation_reason: "The requested DVB-C/QAM output requires IP-to-QAM modulation."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "vod"
+    product_family: "NetUP VoD capability"
+    category: "Content service"
+    enabled: true
+    conditions:
+      services:
+        contains_any: ["video_on_demand"]
+    recommendation_reason: "Video-on-demand was selected."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "billing-service"
+    product_family: "NetUP Middleware and Billing"
+    category: "Subscriber management"
+    enabled: true
+    conditions:
+      services:
+        contains_any: ["billing"]
+    recommendation_reason: "Commercial subscriber management or billing is required."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"
+  - rule_id: "billing-operator"
+    product_family: "NetUP Middleware and Billing"
+    category: "Subscriber management"
+    enabled: true
+    conditions:
+      project_type:
+        in: ["small_provider", "large_operator", "cable_operator"]
+    recommendation_reason: "Operator projects usually require subscriber management and package control."
+    warning: "Requires NetUP validation."
+    source_reference_placeholder: "NetUP validation checklist"
+    validation_status: "Requires NetUP validation"

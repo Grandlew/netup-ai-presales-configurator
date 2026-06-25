@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+netup_presales.db
+generated_reports/
+frontend/node_modules/
+frontend/.next/
+frontend/coverage/
+.env
