@@ -81,7 +81,15 @@ function Spinner({ label }: { label: string }) {
   );
 }
 
-export function Wizard({ options, onStartOver }: { options: ConfigOptionsResponse; onStartOver?: () => void }) {
+export function Wizard({
+  options,
+  onStartOver,
+  onResultsViewChange,
+}: {
+  options: ConfigOptionsResponse;
+  onStartOver?: () => void;
+  onResultsViewChange?: (active: boolean) => void;
+}) {
   const [step, setStep] = useState(0);
   const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
   const [attemptedSteps, setAttemptedSteps] = useState<number[]>([]);
@@ -125,6 +133,10 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
       resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [recommendation, step]);
+
+  useEffect(() => {
+    onResultsViewChange?.(step === 6 && Boolean(recommendation));
+  }, [onResultsViewChange, recommendation, step]);
 
   const canGoBack = step > 0 && !loading && !savingLead;
 
@@ -275,7 +287,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
 
   return (
     <div className="space-y-6">
-      <div className="panel overflow-hidden p-5 md:p-6">
+      <div className="panel overflow-hidden p-5 md:p-6 print:hidden">
         <div className="hidden gap-2 xl:grid xl:grid-cols-7" aria-label="Wizard progress" data-testid="desktop-progress">
           {steps.map((item, index) => {
             const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
@@ -370,7 +382,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
       {banner ? (
         <div
           className={clsx(
-            "panel px-5 py-4 text-sm",
+            "panel px-5 py-4 text-sm print:hidden",
             banner.kind === "success" ? "border-blue/30 bg-blue-50 text-ink" : "border-slate-200 bg-paper text-slate-700",
           )}
           aria-live="polite"
@@ -386,7 +398,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
           event.preventDefault();
           void handleGenerateRecommendation();
         }}
-        className="panel p-5 md:p-6"
+        className="panel p-5 md:p-6 print:border-0 print:bg-transparent print:p-0 print:shadow-none"
         noValidate
       >
         <div className="step-panel" data-step-active="true">
@@ -578,7 +590,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
           ) : null}
         </div>
 
-        <div aria-live="assertive" className="mt-4">
+        <div aria-live="assertive" className="mt-4 print:hidden">
           {submitError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               <p>{submitError}</p>
@@ -591,7 +603,7 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
           ) : null}
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <button
             type="button"
             onClick={() => setStep((current) => Math.max(0, current - 1))}
@@ -617,15 +629,6 @@ export function Wizard({ options, onStartOver }: { options: ConfigOptionsRespons
                 className="min-h-12 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? <Spinner label="Generating preliminary recommendation..." /> : "Generate preliminary recommendation"}
-              </button>
-            ) : null}
-            {step === 6 ? (
-              <button
-                type="button"
-                onClick={() => setStartOverOpen(true)}
-                className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-              >
-                Start over
               </button>
             ) : null}
           </div>

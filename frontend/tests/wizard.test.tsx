@@ -6,9 +6,11 @@ import { vi } from "vitest";
 
 import HomePage from "@/app/page";
 import { ConversationPanel } from "@/components/conversation-panel";
+import { ResultsPanel } from "@/components/results-panel";
 import { Wizard } from "@/components/wizard";
+import type { WizardFormValues } from "@/lib/schema";
 import { api } from "@/lib/api";
-import type { ConfigOptionsResponse } from "@/lib/types";
+import type { ConfigOptionsResponse, Recommendation } from "@/lib/types";
 
 vi.mock("@/lib/api", () => ({
   api: {
@@ -51,7 +53,16 @@ const options: ConfigOptionsResponse = {
 
 const recommendationResponse = {
   project_summary: "180-room hotel IPTV deployment",
-  recommendations: [{ product: "NetUP IPTV Combine 8x", category: "Core", reason: "Fits project scope." }],
+  recommendations: [
+    {
+      product: "NetUP IPTV Combine 8x",
+      category: "Core",
+      reason: "Fits project scope.",
+      rule_id: "hotel-core-01",
+      validation_status: "Requires NetUP validation",
+      warning: "Validate firmware compatibility for final deployment.",
+    },
+  ],
   capacity: {
     unicast_bandwidth_formula: "100 viewers x 6 Mbps x safety factor",
     base_bandwidth_mbps: 600,
@@ -65,6 +76,38 @@ const recommendationResponse = {
   assumptions: ["Archive retention will be confirmed with the customer."],
   rule_version: "2026.06-mvp",
   requires_engineer_review: true,
+};
+
+const submittedValues: WizardFormValues = {
+  project_type: "hotel",
+  country: "United States",
+  company_name: "NetUP Partner",
+  subscribers_or_rooms: 180,
+  number_of_channels: 85,
+  signal_sources: ["ip_streams"],
+  services: ["live_tv"],
+  archive_days: 0,
+  estimated_vod_library_size_tb: 0,
+  need_subscriber_packages: false,
+  need_local_advertising: false,
+  viewer_devices: ["smart_tv", "set_top_box"],
+  delivery_mode: "local_network",
+  adaptive_bitrate_required: false,
+  output_type: "ip",
+  expected_concurrent_viewers: 100,
+  average_channel_bitrate_mbps: 6,
+  available_storage_tb: 50,
+  redundancy_required: false,
+  existing_network_bandwidth_mbps: 1000,
+  existing_equipment: "",
+  target_launch_date: "2026-09-01",
+  budget_range: "$50k-$100k",
+  contact_name: "Jane Doe",
+  email: "jane@example.com",
+  company: "NetUP Partner",
+  phone: "+1 555 0100",
+  additional_project_notes: "",
+  consent_given: true,
 };
 
 beforeEach(() => {
@@ -204,7 +247,7 @@ describe("Wizard", () => {
     resolveRecommend(recommendationResponse);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: recommendationResponse.project_summary })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Request engineering review" })).toBeInTheDocument();
     });
   });
@@ -234,8 +277,9 @@ describe("Wizard", () => {
     await fillContactDetails(user);
     await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
 
-    await screen.findByRole("heading", { name: recommendationResponse.project_summary });
-    await user.click(screen.getAllByRole("button", { name: "Start over" })[0]);
+    await screen.findByRole("heading", { name: "Recommended product families" });
+    expect(screen.getAllByRole("button", { name: "Start over" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Start over" }));
     await user.click(screen.getByRole("button", { name: "Confirm start over" }));
 
     expect(screen.getByRole("heading", { name: "Project profile" })).toBeInTheDocument();
@@ -273,7 +317,8 @@ describe("Wizard", () => {
     expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Missing information" })).toBeInTheDocument();
     expect(screen.getByText("NetUP IPTV Combine 8x")).toBeInTheDocument();
-    expect(screen.getByText("806.4 Mbps")).toBeInTheDocument();
+    expect(screen.getAllByText("806.4 Mbps").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
   });
 
   it("retries recommendation generation after an API failure and preserves state", async () => {
@@ -291,7 +336,7 @@ describe("Wizard", () => {
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    expect(await screen.findByRole("heading", { name: recommendationResponse.project_summary })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
     expect(api.recommend).toHaveBeenCalledTimes(2);
   });
 });
@@ -313,6 +358,103 @@ describe("ConversationPanel", () => {
     expect(screen.getByText("Follow-up question")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
+  });
+});
+
+describe("ResultsPanel", () => {
+  it("renders human-readable enum labels throughout the results", () => {
+    render(
+      <ResultsPanel
+        recommendation={recommendationResponse as Recommendation}
+        submittedValues={{ ...submittedValues, delivery_mode: "internet_ott", services: ["live_tv"], viewer_devices: ["smart_tv", "set_top_box"], signal_sources: ["ip_streams"] }}
+        reportHtml="<html><body>Report</body></html>"
+        onRequestEngineeringReview={vi.fn()}
+        onSaveLead={vi.fn()}
+        onPrintReport={vi.fn()}
+        onStartOver={vi.fn()}
+        onEditConfiguration={vi.fn()}
+        leadSaved={false}
+        loadingAction={false}
+      />,
+    );
+
+    expect(screen.getByText("Internet / OTT")).toBeInTheDocument();
+    expect(screen.getByText("Live TV")).toBeInTheDocument();
+    expect(screen.getByText("Smart TV, Set-top box")).toBeInTheDocument();
+    expect(screen.getByText("Existing IP streams")).toBeInTheDocument();
+  });
+
+  it("shows a formatted generated date and recommendation reference number", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-06-25T10:30:00Z"));
+
+      render(
+        <ResultsPanel
+          recommendation={recommendationResponse as Recommendation}
+          submittedValues={submittedValues}
+          onRequestEngineeringReview={vi.fn()}
+          onSaveLead={vi.fn()}
+          onPrintReport={vi.fn()}
+          onStartOver={vi.fn()}
+          onEditConfiguration={vi.fn()}
+          leadSaved={false}
+          loadingAction={false}
+        />,
+      );
+
+      expect(screen.getByText("June 25, 2026")).toBeInTheDocument();
+      expect(screen.getByText(/^REC-20260625-\d{5}$/)).toBeInTheDocument();
+      expect(screen.getByText("Recommendation rules version")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows expanded rule details instead of repeating the reason", () => {
+    render(
+      <ResultsPanel
+        recommendation={recommendationResponse as Recommendation}
+        submittedValues={submittedValues}
+        onRequestEngineeringReview={vi.fn()}
+        onSaveLead={vi.fn()}
+        onPrintReport={vi.fn()}
+        onStartOver={vi.fn()}
+        onEditConfiguration={vi.fn()}
+        leadSaved={false}
+        loadingAction={false}
+      />,
+    );
+
+    expect(screen.getByText("Matched rule conditions")).toBeInTheDocument();
+    expect(screen.getByText("Project type: Hotel")).toBeInTheDocument();
+    expect(screen.getByText("Delivery mode: Local network")).toBeInTheDocument();
+    expect(screen.getByText("Matched rule reference: hotel-core-01")).toBeInTheDocument();
+  });
+
+  it("marks results content as print-friendly by hiding navigation controls and duplicate renderers", () => {
+    const { container } = render(
+      <div>
+        <div data-testid="wizard-progress" className="print:hidden" />
+        <ResultsPanel
+          recommendation={recommendationResponse as Recommendation}
+          submittedValues={submittedValues}
+          reportHtml="<html><body>Report</body></html>"
+          onRequestEngineeringReview={vi.fn()}
+          onSaveLead={vi.fn()}
+          onPrintReport={vi.fn()}
+          onStartOver={vi.fn()}
+          onEditConfiguration={vi.fn()}
+          leadSaved={false}
+          loadingAction={false}
+        />
+      </div>,
+    );
+
+    expect(screen.getByTestId("actions-card")).toHaveClass("print:hidden");
+    expect(screen.getByTestId("report-preview")).toHaveClass("print:hidden");
+    expect(screen.getByTestId("wizard-progress")).toHaveClass("print:hidden");
+    expect(container.querySelector('iframe[title="Report Preview"]')).toBeInTheDocument();
   });
 });
 

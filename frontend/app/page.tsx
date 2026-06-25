@@ -11,6 +11,7 @@ export default function HomePage() {
   const [options, setOptions] = useState<ConfigOptionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conversationResetSignal, setConversationResetSignal] = useState(0);
+  const [resultsViewActive, setResultsViewActive] = useState(false);
 
   useEffect(() => {
     api
@@ -25,8 +26,8 @@ export default function HomePage() {
 
   return (
     <main className="shell">
-      <section className="grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start">
-        <div id="guided-configurator" className="min-w-0 space-y-5">
+      <section className={resultsViewActive ? "grid gap-7" : "grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start"}>
+        <div id="guided-configurator" className={resultsViewActive ? "min-w-0 space-y-5" : "min-w-0 space-y-5"}>
           <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
           <h1 className="max-w-4xl font-serif text-[2.7rem] leading-[1.05] text-ink md:text-[3.2rem] xl:text-[4rem]">
             Design Your IPTV or OTT Solution
@@ -42,12 +43,13 @@ export default function HomePage() {
             <Wizard
               options={options}
               onStartOver={() => setConversationResetSignal((current) => current + 1)}
+              onResultsViewChange={setResultsViewActive}
             />
           ) : (
             <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
           )}
         </div>
-        <aside className="min-w-0 space-y-5 xl:pt-2">
+        <aside className={resultsViewActive ? "hidden" : "min-w-0 space-y-5 xl:pt-2"}>
           <ConversationPanel
             onUseGuidedConfigurator={focusWizard}
             resetSignal={conversationResetSignal}

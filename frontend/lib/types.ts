@@ -13,7 +13,14 @@ export type ConfigOptionsResponse = {
 
 export type Recommendation = {
   project_summary: string;
-  recommendations: { product: string; category: string; reason: string; warning?: string | null }[];
+  recommendations: {
+    product: string;
+    category: string;
+    reason: string;
+    rule_id?: string;
+    validation_status?: string;
+    warning?: string | null;
+  }[];
   capacity: {
     unicast_bandwidth_formula: string;
     base_bandwidth_mbps: number;
