@@ -10,6 +10,7 @@ import type { ConfigOptionsResponse } from "@/lib/types";
 export default function HomePage() {
   const [options, setOptions] = useState<ConfigOptionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [conversationResetSignal, setConversationResetSignal] = useState(0);
 
   useEffect(() => {
     api
@@ -18,10 +19,14 @@ export default function HomePage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load configurator options."));
   }, []);
 
+  function focusWizard() {
+    document.getElementById("guided-configurator")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <main className="shell">
       <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
+        <div id="guided-configurator" className="space-y-6">
           <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
           <h1 className="max-w-4xl font-serif text-5xl leading-tight text-ink md:text-6xl">
             Design Your IPTV or OTT Solution
@@ -33,10 +38,20 @@ export default function HomePage() {
             This configurator provides a preliminary recommendation. Final equipment, licensing, capacity, compatibility, redundancy, and pricing must be validated by a NetUP engineer.
           </div>
           {error ? <div className="panel p-6 text-sm text-red-600">{error}</div> : null}
-          {options ? <Wizard options={options} /> : <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>}
+          {options ? (
+            <Wizard
+              options={options}
+              onStartOver={() => setConversationResetSignal((current) => current + 1)}
+            />
+          ) : (
+            <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
+          )}
         </div>
         <aside className="space-y-6">
-          <ConversationPanel />
+          <ConversationPanel
+            onUseGuidedConfigurator={focusWizard}
+            resetSignal={conversationResetSignal}
+          />
           <div className="panel p-6">
             <p className="text-sm uppercase tracking-[0.24em] text-blue">Why deterministic rules</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">AI assists the intake, not the recommendation engine</h2>

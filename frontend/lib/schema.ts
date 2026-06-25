@@ -1,19 +1,19 @@
 import { z } from "zod";
 
 export const wizardSchema = z.object({
-  project_type: z.string().min(1, "Project type is required"),
+  project_type: z.string().min(1, "Select a project type."),
   country: z.string().optional(),
   company_name: z.string().optional(),
-  subscribers_or_rooms: z.coerce.number().int().positive("Enter a positive number"),
-  number_of_channels: z.coerce.number().int().positive("Enter a positive number"),
-  signal_sources: z.array(z.string()).min(1, "Select at least one signal source"),
-  services: z.array(z.string()).min(1, "Select at least one service"),
+  subscribers_or_rooms: z.coerce.number().int().positive("Enter the number of rooms or subscribers."),
+  number_of_channels: z.coerce.number().int().positive("Enter the number of TV channels."),
+  signal_sources: z.array(z.string()).min(1, "Select at least one signal source."),
+  services: z.array(z.string()).min(1, "Select at least one service."),
   archive_days: z.coerce.number().int().min(0).default(0),
   estimated_vod_library_size_tb: z.coerce.number().min(0).optional(),
   need_subscriber_packages: z.boolean().default(false),
   need_local_advertising: z.boolean().default(false),
-  viewer_devices: z.array(z.string()).min(1, "Select at least one device type"),
-  delivery_mode: z.string().min(1, "Delivery mode is required"),
+  viewer_devices: z.array(z.string()).min(1, "Select at least one viewer device."),
+  delivery_mode: z.string().min(1, "Select a delivery mode."),
   adaptive_bitrate_required: z.boolean().default(false),
   output_type: z.string().default("ip"),
   expected_concurrent_viewers: z.coerce.number().int().positive().optional(),
@@ -24,14 +24,24 @@ export const wizardSchema = z.object({
   existing_equipment: z.string().optional(),
   target_launch_date: z.string().optional(),
   budget_range: z.string().optional(),
-  contact_name: z.string().min(1, "Contact name is required"),
+  contact_name: z.string().min(1, "Enter the contact name."),
   email: z.string().email("Enter a valid work email"),
   company: z.string().optional(),
   phone: z.string().optional(),
   additional_project_notes: z.string().optional(),
   consent_given: z.literal<boolean>(true, {
-    errorMap: () => ({ message: "Consent is required before submission" }),
+    errorMap: () => ({ message: "Consent is required before submitting the request." }),
   }),
+}).superRefine((value, context) => {
+  if (value.services.includes("catchup_tv") || value.services.includes("time_shift")) {
+    if (!value.archive_days || value.archive_days <= 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["archive_days"],
+        message: "Enter the number of archive days.",
+      });
+    }
+  }
 });
 
 export type WizardFormValues = z.infer<typeof wizardSchema>;
