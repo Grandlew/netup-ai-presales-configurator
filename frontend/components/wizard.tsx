@@ -85,10 +85,14 @@ export function Wizard({
   options,
   onStartOver,
   onResultsViewChange,
+  focusRequestSignal = 0,
+  onDescribeProjectInstead,
 }: {
   options: ConfigOptionsResponse;
   onStartOver?: () => void;
   onResultsViewChange?: (active: boolean) => void;
+  focusRequestSignal?: number;
+  onDescribeProjectInstead?: () => void;
 }) {
   const [step, setStep] = useState(0);
   const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
@@ -103,6 +107,7 @@ export function Wizard({
   const [startOverOpen, setStartOverOpen] = useState(false);
   const [banner, setBanner] = useState<BannerState>(null);
   const resultsTopRef = useRef<HTMLDivElement | null>(null);
+  const wizardTopRef = useRef<HTMLDivElement | null>(null);
 
   const form = useForm<WizardFormValues>({
     resolver: zodResolver(wizardSchema),
@@ -137,6 +142,21 @@ export function Wizard({
   useEffect(() => {
     onResultsViewChange?.(step === 6 && Boolean(recommendation));
   }, [onResultsViewChange, recommendation, step]);
+
+  useEffect(() => {
+    if (!focusRequestSignal) return;
+
+    setBanner(null);
+    setSubmitError(null);
+    setStep(0);
+
+    requestAnimationFrame(() => {
+      wizardTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        form.setFocus("project_type");
+      });
+    });
+  }, [focusRequestSignal, form]);
 
   const canGoBack = step > 0 && !loading && !savingLead;
 
@@ -287,12 +307,25 @@ export function Wizard({
 
   return (
     <div className="space-y-6">
-      <div className="panel overflow-hidden p-5 md:p-6 print:hidden">
-        <div className="hidden gap-2 xl:grid xl:grid-cols-7" aria-label="Wizard progress" data-testid="desktop-progress">
+      <div ref={wizardTopRef} />
+
+      {onDescribeProjectInstead && step < 6 ? (
+        <div className="flex justify-start print:hidden">
+          <button
+            type="button"
+            onClick={onDescribeProjectInstead}
+            className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+          >
+            Describe my project instead
+          </button>
+        </div>
+      ) : null}
+
+      <div className="panel p-5 md:p-6 print:hidden">
+        <div className="hidden gap-1.5 xl:grid xl:grid-cols-7" aria-label="Wizard progress" data-testid="desktop-progress">
           {steps.map((item, index) => {
             const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
             const canNavigate = index <= maxUnlockedStep;
-            const statusLabel = status === "complete" ? "Done" : status === "current" ? "Current" : "";
 
             return (
               <button
@@ -301,8 +334,9 @@ export function Wizard({
                 onClick={() => goToStep(index)}
                 disabled={!canNavigate}
                 aria-current={index === step ? "step" : undefined}
+                aria-label={`${stepTitlesCompact[index]}${status === "complete" ? ", completed" : status === "current" ? ", current step" : ""}`}
                 className={clsx(
-                  "flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
+                  "flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
                   status === "complete" && "border-blue/30 bg-paper text-ink",
                   status === "current" && "border-ink bg-ink text-white shadow-[0_10px_30px_rgba(16,35,61,0.18)]",
                   status === "future" && "border-slate-200 bg-white text-slate-400",
@@ -320,19 +354,15 @@ export function Wizard({
                   {status === "complete" ? "✓" : index + 1}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
-                  {statusLabel ? (
-                    <span className={clsx("mt-0.5 block text-[11px] leading-tight", status === "current" ? "text-blue-100" : "text-slate-500")}>
-                      {statusLabel}
-                    </span>
-                  ) : null}
+                  <span className="block text-[12px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
+                  {status === "current" ? <span className="mt-0.5 block text-[10px] leading-tight text-blue-100">Current step</span> : null}
                 </span>
               </button>
             );
           })}
         </div>
 
-        <div className="hidden grid-cols-2 gap-2 lg:grid xl:hidden" aria-label="Wizard progress" data-testid="desktop-progress-compact">
+        <div className="hidden grid-cols-4 gap-2 md:grid lg:grid xl:hidden" aria-label="Wizard progress" data-testid="desktop-progress-compact">
           {steps.map((item, index) => {
             const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
             const canNavigate = index <= maxUnlockedStep;
@@ -344,6 +374,7 @@ export function Wizard({
                 onClick={() => goToStep(index)}
                 disabled={!canNavigate}
                 aria-current={index === step ? "step" : undefined}
+                aria-label={`${stepTitlesCompact[index]}${status === "complete" ? ", completed" : status === "current" ? ", current step" : ""}`}
                 className={clsx(
                   "flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed",
                   status === "complete" && "border-blue/30 bg-paper text-ink",
@@ -362,13 +393,13 @@ export function Wizard({
                 >
                   {status === "complete" ? "✓" : index + 1}
                 </span>
-                <span className="min-w-0 text-[13px] font-semibold leading-tight text-current">{item.title}</span>
+                <span className="min-w-0 text-[12px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="space-y-3 lg:hidden" data-testid="compact-progress">
+        <div className="space-y-3 md:hidden" data-testid="compact-progress">
           <div className="flex items-center justify-between gap-3 text-sm font-medium text-ink">
             <span>{`Step ${step + 1} of ${steps.length}`}</span>
             <span className="text-right">{currentStep.title}</span>
@@ -409,170 +440,170 @@ export function Wizard({
             </div>
           ) : null}
 
-        {step === 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <FieldSelect form={form} name="project_type" label="Project type" options={options.project_types} showError={shouldShowError(form, "project_type", attemptedSteps.includes(0))} />
-            <FieldInput form={form} name="country" label="Country" showError={shouldShowError(form, "country", attemptedSteps.includes(0))} />
-            <FieldInput form={form} name="company_name" label="Company name" showError={shouldShowError(form, "company_name", attemptedSteps.includes(0))} />
-            <FieldInput
-              form={form}
-              name="subscribers_or_rooms"
-              label={labelForAudience(values.project_type)}
-              type="number"
-              showError={shouldShowError(form, "subscribers_or_rooms", attemptedSteps.includes(0))}
-            />
-          </div>
-        ) : null}
-
-        {step === 1 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <FieldInput
-              form={form}
-              name="number_of_channels"
-              label="Number of TV channels"
-              type="number"
-              showError={shouldShowError(form, "number_of_channels", attemptedSteps.includes(1))}
-            />
-            <CheckboxGroup
-              form={form}
-              name="signal_sources"
-              label="Signal sources"
-              options={options.signal_sources}
-              showError={shouldShowError(form, "signal_sources", attemptedSteps.includes(1))}
-            />
-          </div>
-        ) : null}
-
-        {step === 2 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <CheckboxGroup
-              form={form}
-              name="services"
-              label="Required services"
-              options={options.services}
-              showError={shouldShowError(form, "services", attemptedSteps.includes(2))}
-            />
-            <div className="space-y-4">
-              {archiveRequired ? (
-                <FieldInput
-                  form={form}
-                  name="archive_days"
-                  label="Archive duration in days"
-                  type="number"
-                  helperText="Shown when catch-up TV or time-shift is selected."
-                  showError={shouldShowError(form, "archive_days", attemptedSteps.includes(2))}
-                />
-              ) : null}
+          {step === 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <FieldSelect form={form} name="project_type" label="Project type" options={options.project_types} showError={shouldShowError(form, "project_type", attemptedSteps.includes(0))} />
+              <FieldInput form={form} name="country" label="Country" showError={shouldShowError(form, "country", attemptedSteps.includes(0))} />
+              <FieldInput form={form} name="company_name" label="Company name" showError={shouldShowError(form, "company_name", attemptedSteps.includes(0))} />
               <FieldInput
                 form={form}
-                name="estimated_vod_library_size_tb"
-                label="Estimated VoD library size (TB)"
+                name="subscribers_or_rooms"
+                label={labelForAudience(values.project_type)}
                 type="number"
-                showError={shouldShowError(form, "estimated_vod_library_size_tb", attemptedSteps.includes(2))}
-              />
-              <FieldCheckbox
-                form={form}
-                name="need_subscriber_packages"
-                label="Need subscriber packages"
-                showError={shouldShowError(form, "need_subscriber_packages", attemptedSteps.includes(2))}
-              />
-              <FieldCheckbox
-                form={form}
-                name="need_local_advertising"
-                label="Need local advertising"
-                showError={shouldShowError(form, "need_local_advertising", attemptedSteps.includes(2))}
+                showError={shouldShowError(form, "subscribers_or_rooms", attemptedSteps.includes(0))}
               />
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {step === 3 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <CheckboxGroup
-              form={form}
-              name="viewer_devices"
-              label="Viewer devices"
-              options={options.viewer_devices}
-              showError={shouldShowError(form, "viewer_devices", attemptedSteps.includes(3))}
-            />
-            <div className="space-y-4">
-              <FieldSelect
-                form={form}
-                name="delivery_mode"
-                label="Delivery mode"
-                options={options.delivery_modes}
-                showError={shouldShowError(form, "delivery_mode", attemptedSteps.includes(3))}
-              />
-              <FieldSelect form={form} name="output_type" label="Output type" options={options.output_types} showError={shouldShowError(form, "output_type", attemptedSteps.includes(3))} />
-              <FieldCheckbox
-                form={form}
-                name="adaptive_bitrate_required"
-                label="Adaptive bitrate required"
-                showError={shouldShowError(form, "adaptive_bitrate_required", attemptedSteps.includes(3))}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            <FieldInput
-              form={form}
-              name="expected_concurrent_viewers"
-              label="Expected concurrent viewers"
-              type="number"
-              showError={shouldShowError(form, "expected_concurrent_viewers", attemptedSteps.includes(4))}
-            />
-            <FieldInput
-              form={form}
-              name="average_channel_bitrate_mbps"
-              label="Average channel bitrate (Mbps)"
-              type="number"
-              showError={shouldShowError(form, "average_channel_bitrate_mbps", attemptedSteps.includes(4))}
-            />
-            <FieldInput form={form} name="available_storage_tb" label="Available storage (TB)" type="number" showError={shouldShowError(form, "available_storage_tb", attemptedSteps.includes(4))} />
-            <FieldInput
-              form={form}
-              name="existing_network_bandwidth_mbps"
-              label="Existing network bandwidth (Mbps)"
-              type="number"
-              showError={shouldShowError(form, "existing_network_bandwidth_mbps", attemptedSteps.includes(4))}
-            />
-            <FieldCheckbox form={form} name="redundancy_required" label="Redundancy required" showError={shouldShowError(form, "redundancy_required", attemptedSteps.includes(4))} />
-            <FieldInput form={form} name="target_launch_date" label="Target launch date" showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))} />
-            <FieldInput form={form} name="budget_range" label="Budget range" showError={shouldShowError(form, "budget_range", attemptedSteps.includes(4))} />
-            <FieldTextArea form={form} name="existing_equipment" label="Existing equipment" showError={shouldShowError(form, "existing_equipment", attemptedSteps.includes(4))} />
-          </div>
-        ) : null}
-
-        {step === 5 ? (
-          <div className="space-y-6">
+          {step === 1 ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <FieldInput form={form} name="contact_name" label="Contact name" showError={shouldShowError(form, "contact_name", attemptedSteps.includes(5))} />
-              <FieldInput form={form} name="email" label="Work email" showError={shouldShowError(form, "email", attemptedSteps.includes(5))} />
-              <FieldInput form={form} name="company" label="Company" showError={shouldShowError(form, "company", attemptedSteps.includes(5))} />
-              <FieldInput form={form} name="phone" label="Phone" showError={shouldShowError(form, "phone", attemptedSteps.includes(5))} />
-            </div>
-            <FieldTextArea
-              form={form}
-              name="additional_project_notes"
-              label="Additional project notes"
-              showError={shouldShowError(form, "additional_project_notes", attemptedSteps.includes(5))}
-            />
-            <div className="rounded-3xl border border-slate-200 bg-paper p-5">
-              <FieldCheckbox
+              <FieldInput
                 form={form}
-                name="consent_given"
-                label="I consent to submitting this presales request."
-                showError={shouldShowError(form, "consent_given", attemptedSteps.includes(5))}
-                fullWidth
+                name="number_of_channels"
+                label="Number of TV channels"
+                type="number"
+                showError={shouldShowError(form, "number_of_channels", attemptedSteps.includes(1))}
+              />
+              <CheckboxGroup
+                form={form}
+                name="signal_sources"
+                label="Signal sources"
+                options={options.signal_sources}
+                showError={shouldShowError(form, "signal_sources", attemptedSteps.includes(1))}
               />
             </div>
-            <div className="rounded-3xl border border-blue/20 bg-blue-50 p-5 text-sm text-slate-700">
-              Your configuration will be processed using validated recommendation rules.
+          ) : null}
+
+          {step === 2 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <CheckboxGroup
+                form={form}
+                name="services"
+                label="Required services"
+                options={options.services}
+                showError={shouldShowError(form, "services", attemptedSteps.includes(2))}
+              />
+              <div className="space-y-4">
+                {archiveRequired ? (
+                  <FieldInput
+                    form={form}
+                    name="archive_days"
+                    label="Archive duration in days"
+                    type="number"
+                    helperText="Shown when catch-up TV or time-shift is selected."
+                    showError={shouldShowError(form, "archive_days", attemptedSteps.includes(2))}
+                  />
+                ) : null}
+                <FieldInput
+                  form={form}
+                  name="estimated_vod_library_size_tb"
+                  label="Estimated VoD library size (TB)"
+                  type="number"
+                  showError={shouldShowError(form, "estimated_vod_library_size_tb", attemptedSteps.includes(2))}
+                />
+                <FieldCheckbox
+                  form={form}
+                  name="need_subscriber_packages"
+                  label="Need subscriber packages"
+                  showError={shouldShowError(form, "need_subscriber_packages", attemptedSteps.includes(2))}
+                />
+                <FieldCheckbox
+                  form={form}
+                  name="need_local_advertising"
+                  label="Need local advertising"
+                  showError={shouldShowError(form, "need_local_advertising", attemptedSteps.includes(2))}
+                />
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          {step === 3 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <CheckboxGroup
+                form={form}
+                name="viewer_devices"
+                label="Viewer devices"
+                options={options.viewer_devices}
+                showError={shouldShowError(form, "viewer_devices", attemptedSteps.includes(3))}
+              />
+              <div className="space-y-4">
+                <FieldSelect
+                  form={form}
+                  name="delivery_mode"
+                  label="Delivery mode"
+                  options={options.delivery_modes}
+                  showError={shouldShowError(form, "delivery_mode", attemptedSteps.includes(3))}
+                />
+                <FieldSelect form={form} name="output_type" label="Output type" options={options.output_types} showError={shouldShowError(form, "output_type", attemptedSteps.includes(3))} />
+                <FieldCheckbox
+                  form={form}
+                  name="adaptive_bitrate_required"
+                  label="Adaptive bitrate required"
+                  showError={shouldShowError(form, "adaptive_bitrate_required", attemptedSteps.includes(3))}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <FieldInput
+                form={form}
+                name="expected_concurrent_viewers"
+                label="Expected concurrent viewers"
+                type="number"
+                showError={shouldShowError(form, "expected_concurrent_viewers", attemptedSteps.includes(4))}
+              />
+              <FieldInput
+                form={form}
+                name="average_channel_bitrate_mbps"
+                label="Average channel bitrate (Mbps)"
+                type="number"
+                showError={shouldShowError(form, "average_channel_bitrate_mbps", attemptedSteps.includes(4))}
+              />
+              <FieldInput form={form} name="available_storage_tb" label="Available storage (TB)" type="number" showError={shouldShowError(form, "available_storage_tb", attemptedSteps.includes(4))} />
+              <FieldInput
+                form={form}
+                name="existing_network_bandwidth_mbps"
+                label="Existing network bandwidth (Mbps)"
+                type="number"
+                showError={shouldShowError(form, "existing_network_bandwidth_mbps", attemptedSteps.includes(4))}
+              />
+              <FieldCheckbox form={form} name="redundancy_required" label="Redundancy required" showError={shouldShowError(form, "redundancy_required", attemptedSteps.includes(4))} />
+              <FieldInput form={form} name="target_launch_date" label="Target launch date" showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))} />
+              <FieldInput form={form} name="budget_range" label="Budget range" showError={shouldShowError(form, "budget_range", attemptedSteps.includes(4))} />
+              <FieldTextArea form={form} name="existing_equipment" label="Existing equipment" showError={shouldShowError(form, "existing_equipment", attemptedSteps.includes(4))} />
+            </div>
+          ) : null}
+
+          {step === 5 ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldInput form={form} name="contact_name" label="Contact name" showError={shouldShowError(form, "contact_name", attemptedSteps.includes(5))} />
+                <FieldInput form={form} name="email" label="Work email" showError={shouldShowError(form, "email", attemptedSteps.includes(5))} />
+                <FieldInput form={form} name="company" label="Company" showError={shouldShowError(form, "company", attemptedSteps.includes(5))} />
+                <FieldInput form={form} name="phone" label="Phone" showError={shouldShowError(form, "phone", attemptedSteps.includes(5))} />
+              </div>
+              <FieldTextArea
+                form={form}
+                name="additional_project_notes"
+                label="Additional project notes"
+                showError={shouldShowError(form, "additional_project_notes", attemptedSteps.includes(5))}
+              />
+              <div className="rounded-3xl border border-slate-200 bg-paper p-5">
+                <FieldCheckbox
+                  form={form}
+                  name="consent_given"
+                  label="I consent to submitting this presales request."
+                  showError={shouldShowError(form, "consent_given", attemptedSteps.includes(5))}
+                  fullWidth
+                />
+              </div>
+              <div className="rounded-3xl border border-blue/20 bg-blue-50 p-5 text-sm text-slate-700">
+                Your configuration will be processed using validated recommendation rules.
+              </div>
+            </div>
+          ) : null}
 
           {step === 6 && recommendation ? (
             <ResultsPanel

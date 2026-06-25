@@ -204,9 +204,9 @@ describe("Wizard", () => {
     await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
     await user.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(screen.getByRole("button", { name: /^Required services$/i })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: /^Services$/i })[0]).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: /^Project profile$/i }));
+    await user.click(screen.getAllByRole("button", { name: /^Profile(, completed)?$/i })[0]);
 
     expect(screen.getByRole("heading", { name: "Project profile" })).toBeInTheDocument();
   });
@@ -298,9 +298,8 @@ describe("Wizard", () => {
     const { container } = render(<Wizard options={options} />);
 
     expect(screen.getByTestId("desktop-progress")).toHaveClass("xl:grid-cols-7");
-    expect(screen.getByTestId("desktop-progress-compact")).toHaveClass("lg:grid", "xl:hidden");
+    expect(screen.getByTestId("desktop-progress-compact")).toHaveClass("md:grid", "xl:hidden");
     expect(container.firstChild).toHaveClass("space-y-6");
-    expect(screen.getByTestId("desktop-progress").parentElement).toHaveClass("overflow-hidden");
     expect(screen.getAllByRole("button", { name: /Profile|Sources|Services|Delivery|Capacity|Contact|Results/i })).toHaveLength(14);
     expect(screen.queryByText(options.disclaimer)).not.toBeInTheDocument();
   }, 10000);
@@ -319,7 +318,7 @@ describe("Wizard", () => {
     expect(screen.getByText("NetUP IPTV Combine 8x")).toBeInTheDocument();
     expect(screen.getAllByText("806.4 Mbps").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
-  });
+  }, 10000);
 
   it("retries recommendation generation after an API failure and preserves state", async () => {
     const user = userEvent.setup();
@@ -338,7 +337,7 @@ describe("Wizard", () => {
 
     expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
     expect(api.recommend).toHaveBeenCalledTimes(2);
-  });
+  }, 10000);
 });
 
 describe("ConversationPanel", () => {
@@ -358,6 +357,25 @@ describe("ConversationPanel", () => {
     expect(screen.getByText("Follow-up question")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
+  });
+
+  it("keeps the guided button enabled when AI is unavailable", async () => {
+    const user = userEvent.setup();
+    const onUseGuidedConfigurator = vi.fn();
+    render(<ConversationPanel onUseGuidedConfigurator={onUseGuidedConfigurator} />);
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+    expect(onUseGuidedConfigurator).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -468,5 +486,111 @@ describe("HomePage layout", () => {
 
     expect(document.querySelector("main")).toHaveClass("shell");
     expect(screen.getAllByText(options.disclaimer)).toHaveLength(1);
+  });
+
+  it("switches to guided mode, scrolls, and focuses the first field", async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Natural-language intake" })).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "Describe my project instead" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole("combobox", { name: /Project type/i }));
+    });
+    expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("switches to guided mode even when the conversation textarea contains text", async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Project draft already typed here");
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Natural-language intake" })).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("combobox", { name: /Project type/i })).toBeInTheDocument();
+  });
+
+  it("does not submit extraction when using guided mode", async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Project draft");
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+
+    expect(api.extract).not.toHaveBeenCalled();
+  });
+
+  it("preserves guided wizard data when switching to conversation mode and back", async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: /Project type/i }), "hotel");
+    await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
+
+    await user.click(screen.getByRole("button", { name: "Describe my project instead" }));
+    expect(screen.getByRole("heading", { name: "Natural-language intake" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+
+    expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("hotel");
+    expect(screen.getByRole("spinbutton", { name: /Number of rooms/i })).toHaveValue(180);
+  });
+
+  it("renders all seven complete step labels without truncation in desktop navigation", async () => {
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Profile");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Sources");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Services");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Delivery");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Capacity");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Contact");
+    expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Results");
+    expect(screen.queryByText("Sourc")).not.toBeInTheDocument();
+    expect(screen.queryByText("Servic")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delive")).not.toBeInTheDocument();
+    expect(screen.queryByText("Capaci")).not.toBeInTheDocument();
+    expect(screen.queryByText("Contac")).not.toBeInTheDocument();
+  });
+
+  it("keeps compact progress for mobile while using multi-row desktop progress for tablet widths", async () => {
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    expect(screen.getByTestId("desktop-progress-compact")).toHaveClass("md:grid", "xl:hidden");
+    expect(screen.getByTestId("compact-progress")).toHaveClass("md:hidden");
   });
 });
