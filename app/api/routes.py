@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import httpx
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -58,8 +56,6 @@ async def conversation_extract(
         return await extractor.extract(payload.message, payload.current_requirements)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except httpx.HTTPStatusError as exc:  # type: ignore[name-defined]
-        raise HTTPException(status_code=502, detail="AI extraction request failed.") from exc
 
 
 @api_router.get("/api/products", response_model=list[ProductCatalogItem])

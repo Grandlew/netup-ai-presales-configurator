@@ -18,21 +18,23 @@ class ConversationExtractor:
     def enabled(self) -> bool:
         return bool(self.settings.openai_api_key)
 
+    def _fallback_response(self, current: PartialCustomerRequirements) -> ConversationExtractResponse:
+        missing = missing_required_fields(current)
+        return ConversationExtractResponse(
+            extracted_requirements=current,
+            missing_required_fields=missing,
+            next_question=next_question_for(current),
+            ready_for_recommendation=not missing,
+            ai_available=False,
+        )
+
     async def extract(self, message: str, current: PartialCustomerRequirements | None) -> ConversationExtractResponse:
         if len(message) > self.settings.max_message_length:
             raise ValueError("Message is too long.")
 
         current = current or PartialCustomerRequirements()
         if not self.enabled:
-            merged = current
-            missing = missing_required_fields(merged)
-            return ConversationExtractResponse(
-                extracted_requirements=merged,
-                missing_required_fields=missing,
-                next_question=next_question_for(merged),
-                ready_for_recommendation=not missing,
-                ai_available=False,
-            )
+            return self._fallback_response(current)
 
         payload = {
             "model": self.settings.openai_model,
@@ -77,10 +79,13 @@ class ConversationExtractor:
             "Content-Type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post("https://api.openai.com/v1/responses", headers=headers, json=payload)
-            response.raise_for_status()
-            body = response.json()
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post("https://api.openai.com/v1/responses", headers=headers, json=payload)
+                response.raise_for_status()
+                body = response.json()
+        except httpx.HTTPError:
+            return self._fallback_response(current)
 
         output_text = body.get("output_text")
         if not output_text:
@@ -112,4 +117,3 @@ class ConversationExtractor:
             ready_for_recommendation=not missing,
             ai_available=True,
         )
-

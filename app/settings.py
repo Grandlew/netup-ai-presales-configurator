@@ -3,6 +3,11 @@ from __future__ import annotations
 from functools import lru_cache
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 class Settings:
@@ -16,7 +21,7 @@ class Settings:
         self.cors_origins = [origin.strip()
                              for origin in raw_origins.split(",") if origin.strip()]
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         self.rate_limit_requests = int(os.getenv("RATE_LIMIT_REQUESTS", "60"))
         self.rate_limit_window_seconds = int(
             os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))

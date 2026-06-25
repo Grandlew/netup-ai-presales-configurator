@@ -46,7 +46,7 @@ Key values:
 
 - `DATABASE_URL`: SQLite by default, PostgreSQL supported in production
 - `OPENAI_API_KEY`: enables conversational extraction
-- `OPENAI_MODEL`: defaults to `gpt-5.4-mini`
+- `OPENAI_MODEL`: defaults to `gpt-4.1-mini`
 - `CORS_ORIGINS`: comma-separated frontend origins
 - `NEXT_PUBLIC_API_BASE_URL`: frontend backend URL
 

@@ -1,4 +1,8 @@
+import httpx
+
+from app.dependencies import get_extractor
 from app.schemas import CustomerRequirements
+from app.services.ai_extractor import ConversationExtractor
 
 
 def sample_payload() -> dict:
@@ -40,6 +44,40 @@ def test_conversation_extract_fallback_without_key(client):
         "/api/conversation/extract",
         json={"message": "We have a 180-room hotel with 85 satellite channels.", "current_requirements": {}},
     )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_available"] is False
+    assert body["next_question"]
+
+
+def test_conversation_extract_fallback_when_upstream_ai_request_fails(client):
+    class FailingExtractor(ConversationExtractor):
+        @property
+        def enabled(self) -> bool:
+            return True
+
+        async def extract(self, message, current):
+            return await super().extract(message, current)
+
+    original_post = httpx.AsyncClient.post
+
+    async def failing_post(self, *args, **kwargs):
+        request = httpx.Request("POST", "https://api.openai.com/v1/responses")
+        response = httpx.Response(status_code=400, request=request, json={"error": {"message": "Unknown model"}})
+        raise httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+    client.app.dependency_overrides[get_extractor] = FailingExtractor
+    httpx.AsyncClient.post = failing_post
+
+    try:
+        response = client.post(
+            "/api/conversation/extract",
+            json={"message": "We have a 180-room hotel with 85 satellite channels.", "current_requirements": {}},
+        )
+    finally:
+        client.app.dependency_overrides.pop(get_extractor, None)
+        httpx.AsyncClient.post = original_post
+
     assert response.status_code == 200
     body = response.json()
     assert body["ai_available"] is False
