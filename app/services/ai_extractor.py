@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Iterable
 from typing import Any
 
 from pydantic import ValidationError
 
-from app.schemas import AIExtractionPayload, ConversationExtractResponse, PartialCustomerRequirements
+from app.schemas import (
+    AIExtractionPayload,
+    ConversationExtractResponse,
+    DeliveryMode,
+    OutputType,
+    PartialCustomerRequirements,
+    ProjectType,
+    Service,
+    SignalSource,
+    ViewerDevice,
+)
 from app.services.requirements import missing_required_fields, next_question_for
 from app.settings import get_settings
 
@@ -54,15 +65,7 @@ Rules:
 class ConversationExtractor:
     def __init__(self) -> None:
         self.settings = get_settings()
-        self.client = (
-            AsyncOpenAI(
-                api_key=self.settings.openai_api_key,
-                timeout=30.0,
-                max_retries=0,
-            )
-            if self.settings.openai_api_key
-            else None
-        )
+        self.client = None
 
     @property
     def enabled(self) -> bool:
@@ -154,6 +157,19 @@ class ConversationExtractor:
             message=message,
         )
 
+    def _get_client(self):
+        if self.client is not None:
+            return self.client
+        if not self.settings.openai_api_key or not OPENAI_SDK_AVAILABLE:
+            return None
+
+        self.client = AsyncOpenAI(
+            api_key=self.settings.openai_api_key,
+            timeout=30.0,
+            max_retries=0,
+        )
+        return self.client
+
     def _log_openai_failure(self, exc: Exception, *, message: str, current: PartialCustomerRequirements, error_code: str) -> None:
         response = getattr(exc, "response", None)
         body = getattr(exc, "body", None)
@@ -177,6 +193,59 @@ class ConversationExtractor:
         }
         logger.exception("AI extraction request failed: %s", safe_context)
 
+    def _strict_json_schema(self) -> dict[str, Any]:
+        extracted_properties = {
+            "project_type": {"anyOf": [{"type": "string", "enum": [member.value for member in ProjectType]}, {"type": "null"}]},
+            "country": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "company_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "subscribers_or_rooms": {"anyOf": [{"type": "integer", "exclusiveMinimum": 0, "maximum": 10_000_000}, {"type": "null"}]},
+            "expected_concurrent_viewers": {"anyOf": [{"type": "integer", "exclusiveMinimum": 0}, {"type": "null"}]},
+            "number_of_channels": {"anyOf": [{"type": "integer", "exclusiveMinimum": 0, "maximum": 20_000}, {"type": "null"}]},
+            "signal_sources": {"type": "array", "items": {"type": "string", "enum": [member.value for member in SignalSource]}},
+            "services": {"type": "array", "items": {"type": "string", "enum": [member.value for member in Service]}},
+            "viewer_devices": {"type": "array", "items": {"type": "string", "enum": [member.value for member in ViewerDevice]}},
+            "delivery_mode": {"anyOf": [{"type": "string", "enum": [member.value for member in DeliveryMode]}, {"type": "null"}]},
+            "output_type": {"anyOf": [{"type": "string", "enum": [member.value for member in OutputType]}, {"type": "null"}]},
+            "adaptive_bitrate_required": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+            "redundancy_required": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+            "available_storage_tb": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}]},
+            "archive_days": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 3650}, {"type": "null"}]},
+            "average_channel_bitrate_mbps": {"anyOf": [{"type": "number", "exclusiveMinimum": 0, "maximum": 100}, {"type": "null"}]},
+            "estimated_vod_library_size_tb": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}]},
+            "need_subscriber_packages": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+            "need_local_advertising": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
+            "existing_network_bandwidth_mbps": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}]},
+            "existing_equipment": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "budget_range": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "target_launch_date": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "contact_name": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "company": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "email": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "phone": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            "additional_project_notes": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+        }
+
+        normalized_schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "extracted_requirements": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": extracted_properties,
+                    "required": list(extracted_properties.keys()),
+                },
+                "next_question": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+            },
+            "required": ["extracted_requirements", "next_question"],
+        }
+        return {
+            "type": "json_schema",
+            "name": "netup_extraction",
+            "strict": True,
+            "schema": normalized_schema,
+        }
+
     async def extract(self, message: str, current: PartialCustomerRequirements | None) -> ConversationExtractResponse:
         if len(message) > self.settings.max_message_length:
             raise ValueError("Message is too long.")
@@ -195,7 +264,16 @@ class ConversationExtractor:
             )
 
         try:
-            parsed = await self.client.responses.parse(
+            client = self._get_client()
+            if client is None:
+                return self._error_response(
+                    current=current,
+                    ai_available=False,
+                    error_code="ai_not_configured",
+                    message="Natural-language intake is currently unavailable because the AI service is not configured.",
+                )
+
+            response = await client.responses.create(
                 model=self.settings.openai_model,
                 instructions=SYSTEM_PROMPT,
                 input=[
@@ -214,12 +292,26 @@ class ConversationExtractor:
                         ],
                     }
                 ],
-                text_format=AIExtractionPayload,
+                text={
+                    "format": self._strict_json_schema(),
+                },
             )
-            parsed_payload = parsed.output_parsed
-            if parsed_payload is None:
+
+            output_text = getattr(response, "output_text", None)
+            if not output_text:
+                for item in getattr(response, "output", []):
+                    for content in getattr(item, "content", []):
+                        if getattr(content, "type", None) == "output_text":
+                            output_text = getattr(content, "text", None)
+                            if output_text:
+                                break
+                    if output_text:
+                        break
+
+            if not output_text:
                 raise ValueError("AI extraction did not return structured output.")
 
+            parsed_payload = AIExtractionPayload.model_validate(json.loads(output_text))
             extracted = PartialCustomerRequirements.model_validate(
                 parsed_payload.extracted_requirements.model_dump(mode="json")
             )

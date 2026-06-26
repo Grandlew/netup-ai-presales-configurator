@@ -12,7 +12,8 @@ EXAMPLE_MESSAGE = "We have a 180-room hotel. We want 85 satellite and IP channel
 
 class FakeParsedResponse:
     def __init__(self, payload: AIExtractionPayload) -> None:
-        self.output_parsed = payload
+        self.output_text = payload.model_dump_json()
+        self.output = []
 
 
 class FakeResponsesClient:
@@ -20,7 +21,7 @@ class FakeResponsesClient:
         self.payload = payload
         self.calls: list[dict] = []
 
-    async def parse(self, **kwargs):
+    async def create(self, **kwargs):
         self.calls.append(kwargs)
         return FakeParsedResponse(self.payload)
 

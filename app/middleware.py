@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from collections.abc import Callable
+import logging
 import time
 import uuid
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+
+logger = logging.getLogger(__name__)
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -24,6 +28,14 @@ class ErrorContextMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception:
+            logger.exception(
+                "Unhandled request error",
+                extra={
+                    "request_id": getattr(request.state, "request_id", None),
+                    "path": str(request.url.path),
+                    "method": request.method,
+                },
+            )
             return JSONResponse(
                 status_code=500,
                 content={
@@ -56,4 +68,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         timestamps.append(now)
         return await call_next(request)
-
