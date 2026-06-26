@@ -111,6 +111,18 @@ def test_lead_and_report_endpoints(client):
     assert get_report.status_code == 200
     assert "Preliminary Solution Recommendation" in get_report.json()["generated_content"]
 
+    pdf_download = client.get(f"/api/reports/{report_id}/download?format=pdf")
+    assert pdf_download.status_code == 200
+    assert pdf_download.headers["content-type"] == "application/pdf"
+    assert pdf_download.headers["content-disposition"].endswith(f'"netup-preliminary-report-{report_id}.pdf"')
+    assert pdf_download.content.startswith(b"%PDF-1.4")
+
+    doc_download = client.get(f"/api/reports/{report_id}/download?format=doc")
+    assert doc_download.status_code == 200
+    assert doc_download.headers["content-type"] == "application/msword"
+    assert doc_download.headers["content-disposition"].endswith(f'"netup-preliminary-report-{report_id}.doc"')
+    assert b"Preliminary Solution Recommendation" in doc_download.content
+
 
 def test_lead_requires_consent(client):
     recommendation = client.post("/recommend", json=sample_payload()).json()

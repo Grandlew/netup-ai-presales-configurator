@@ -169,9 +169,12 @@ export function ResultsPanel({
   recommendation,
   submittedValues,
   reportHtml,
+  reportReady,
   onRequestEngineeringReview,
   onSaveLead,
   onPrintReport,
+  onDownloadPdf,
+  onDownloadWord,
   onStartOver,
   onEditConfiguration,
   leadSaved,
@@ -180,9 +183,12 @@ export function ResultsPanel({
   recommendation: Recommendation;
   submittedValues?: WizardFormValues | null;
   reportHtml?: string | null;
+  reportReady: boolean;
   onRequestEngineeringReview: () => void | Promise<boolean>;
   onSaveLead: () => void | Promise<boolean>;
   onPrintReport: () => void | Promise<boolean>;
+  onDownloadPdf: () => void | Promise<boolean>;
+  onDownloadWord: () => void | Promise<boolean>;
   onStartOver: () => void;
   onEditConfiguration: () => void;
   leadSaved: boolean;
@@ -401,7 +407,23 @@ export function ResultsPanel({
               disabled={loadingAction}
               className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              Print preliminary report
+              Prepare report preview
+            </button>
+            <button
+              type="button"
+              onClick={() => void onDownloadPdf()}
+              disabled={loadingAction}
+              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+            >
+              Download PDF report
+            </button>
+            <button
+              type="button"
+              onClick={() => void onDownloadWord()}
+              disabled={loadingAction}
+              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+            >
+              Download Word report
             </button>
             <button
               type="button"
@@ -426,17 +448,40 @@ export function ResultsPanel({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-xl font-semibold text-ink">Printable preliminary report</h3>
-              <p className="mt-2 text-sm text-slate-600">Use the preview below to print or download the current presales summary.</p>
+              <p className="mt-2 text-sm text-slate-600">Use the preview below to print or download the current presales summary in HTML, Word, or PDF format.</p>
             </div>
-            <a
-              href={reportHref}
-              download="netup-preliminary-report.html"
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-            >
-              Download report
-            </a>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <a
+                href={reportHref}
+                download="netup-preliminary-report.html"
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+              >
+                Download HTML
+              </a>
+              <button
+                type="button"
+                onClick={() => void onDownloadPdf()}
+                disabled={loadingAction}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                Download PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => void onDownloadWord()}
+                disabled={loadingAction}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                Download Word
+              </button>
+            </div>
           </div>
           <iframe title="Report Preview" className="mt-4 h-[480px] w-full rounded-2xl border border-slate-200 bg-white" srcDoc={reportHtml} />
+        </section>
+      ) : reportReady ? (
+        <section className="panel p-5 md:p-6 print:hidden" data-testid="report-ready">
+          <h3 className="text-xl font-semibold text-ink">Report ready for download</h3>
+          <p className="mt-2 text-sm text-slate-600">The report has been generated. You can download it as Word or PDF from the actions panel above.</p>
         </section>
       ) : null}
     </div>

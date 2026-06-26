@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 import html
+import re
+from textwrap import wrap
 
 from app.schemas import CustomerRequirements, RecommendationResponse
 
@@ -68,3 +70,114 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
   </footer>
 </body>
 </html>"""
+
+
+def render_report_doc(report_html: str) -> bytes:
+    return report_html.encode("utf-8")
+
+
+def render_report_pdf(report_html: str) -> bytes:
+    text_lines = _html_to_text_lines(report_html)
+    return _build_simple_pdf(text_lines)
+
+
+def _html_to_text_lines(report_html: str) -> list[str]:
+    normalized = report_html.replace("\r", "")
+    normalized = re.sub(r"</(h1|h2|h3|p|li|div|ul|footer)>", "\n", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"<li>", "- ", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"<br\s*/?>", "\n", normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r"<[^>]+>", "", normalized)
+    normalized = html.unescape(normalized)
+    normalized = normalized.replace("\u2019", "'").replace("\u00a0", " ")
+
+    lines: list[str] = []
+    for raw_line in normalized.splitlines():
+      stripped = " ".join(raw_line.split())
+      if not stripped:
+          continue
+      wrapped = wrap(stripped, width=90) or [""]
+      lines.extend(wrapped)
+
+    return lines
+
+
+def _build_simple_pdf(lines: list[str]) -> bytes:
+    max_lines_per_page = 46
+    pages = [lines[index:index + max_lines_per_page] for index in range(0, len(lines), max_lines_per_page)] or [[]]
+    objects: list[bytes] = []
+
+    def add_object(content: bytes) -> int:
+        objects.append(content)
+        return len(objects)
+
+    font_id = add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    page_ids: list[int] = []
+    content_ids: list[int] = []
+    pages_id_placeholder = len(objects) + 1
+
+    for page_lines in pages:
+        content_stream = _page_stream(page_lines)
+        content_id = add_object(
+            f"<< /Length {len(content_stream)} >>\nstream\n".encode("ascii")
+            + content_stream
+            + b"\nendstream"
+        )
+        content_ids.append(content_id)
+        page_id = add_object(b"")
+        page_ids.append(page_id)
+
+    pages_kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
+    pages_id = add_object(f"<< /Type /Pages /Kids [{pages_kids}] /Count {len(page_ids)} >>".encode("ascii"))
+
+    for page_id, content_id in zip(page_ids, content_ids, strict=True):
+        objects[page_id - 1] = (
+            f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 612 792] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
+        ).encode("ascii")
+
+    catalog_id = add_object(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
+
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{index} 0 obj\n".encode("ascii"))
+        pdf.extend(obj)
+        pdf.extend(b"\nendobj\n")
+
+    xref_offset = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+
+    pdf.extend(
+        (
+            f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("ascii")
+    )
+    return bytes(pdf)
+
+
+def _page_stream(lines: list[str]) -> bytes:
+    y_position = 756
+    commands = ["BT", "/F1 11 Tf", "50 756 Td", "14 TL"]
+    first_line = True
+
+    for line in lines:
+        sanitized = _escape_pdf_text(line)
+        if first_line:
+            commands.append(f"({sanitized}) Tj")
+            first_line = False
+        else:
+            commands.append("T*")
+            commands.append(f"({sanitized}) Tj")
+        y_position -= 14
+
+    commands.append("ET")
+    return "\n".join(commands).encode("latin-1", errors="replace")
+
+
+def _escape_pdf_text(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")

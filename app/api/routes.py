@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -24,7 +25,7 @@ from app.services.ai_extractor import ConversationExtractor
 from app.services.catalog import get_products
 from app.services.options import get_options
 from app.services.recommendation import recommend
-from app.services.reports import render_report_html
+from app.services.reports import render_report_doc, render_report_html, render_report_pdf
 from app.settings import get_settings
 
 
@@ -145,3 +146,29 @@ def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
     return report
+
+
+@api_router.get("/api/reports/{report_id}/download")
+def download_report(
+    report_id: str,
+    format: str = Query(pattern="^(pdf|doc)$"),
+    db: Session = Depends(get_db),
+) -> Response:
+    report = db.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    if format == "pdf":
+        content = render_report_pdf(report.generated_content)
+        media_type = "application/pdf"
+        filename = f"netup-preliminary-report-{report_id}.pdf"
+    else:
+        content = render_report_doc(report.generated_content)
+        media_type = "application/msword"
+        filename = f"netup-preliminary-report-{report_id}.doc"
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

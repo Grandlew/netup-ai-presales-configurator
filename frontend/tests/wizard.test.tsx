@@ -29,6 +29,7 @@ vi.mock("@/lib/api", () => ({
     recommend: vi.fn(),
     createLead: vi.fn(),
     createReport: vi.fn(),
+    downloadReport: vi.fn(),
     extract: vi.fn(),
   },
 }));
@@ -128,6 +129,7 @@ beforeEach(() => {
   vi.mocked(api.recommend).mockResolvedValue(recommendationResponse);
   vi.mocked(api.createLead).mockResolvedValue({ id: "lead-1" });
   vi.mocked(api.createReport).mockResolvedValue({ id: "report-1", generated_content: "<html><body>Report</body></html>" });
+  vi.mocked(api.downloadReport).mockResolvedValue(new Blob(["report"], { type: "application/pdf" }));
   vi.mocked(api.extract).mockResolvedValue({
     extracted_requirements: {
       project_type: "hotel",
@@ -508,9 +510,12 @@ describe("ResultsPanel", () => {
         recommendation={recommendationResponse as Recommendation}
         submittedValues={{ ...submittedValues, delivery_mode: "internet_ott", services: ["live_tv"], viewer_devices: ["smart_tv", "set_top_box"], signal_sources: ["ip_streams"] }}
         reportHtml="<html><body>Report</body></html>"
+        reportReady={true}
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
+        onDownloadPdf={vi.fn()}
+        onDownloadWord={vi.fn()}
         onStartOver={vi.fn()}
         onEditConfiguration={vi.fn()}
         leadSaved={false}
@@ -530,12 +535,15 @@ describe("ResultsPanel", () => {
       vi.setSystemTime(new Date("2026-06-25T10:30:00Z"));
 
       render(
-        <ResultsPanel
+      <ResultsPanel
           recommendation={recommendationResponse as Recommendation}
           submittedValues={submittedValues}
+          reportReady={false}
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
+          onDownloadPdf={vi.fn()}
+          onDownloadWord={vi.fn()}
           onStartOver={vi.fn()}
           onEditConfiguration={vi.fn()}
           leadSaved={false}
@@ -553,16 +561,19 @@ describe("ResultsPanel", () => {
 
   it("shows expanded rule details instead of repeating the reason", () => {
     render(
-      <ResultsPanel
-        recommendation={recommendationResponse as Recommendation}
-        submittedValues={submittedValues}
-        onRequestEngineeringReview={vi.fn()}
-        onSaveLead={vi.fn()}
-        onPrintReport={vi.fn()}
-        onStartOver={vi.fn()}
-        onEditConfiguration={vi.fn()}
-        leadSaved={false}
-        loadingAction={false}
+        <ResultsPanel
+          recommendation={recommendationResponse as Recommendation}
+          submittedValues={submittedValues}
+          reportReady={false}
+          onRequestEngineeringReview={vi.fn()}
+          onSaveLead={vi.fn()}
+          onPrintReport={vi.fn()}
+          onDownloadPdf={vi.fn()}
+          onDownloadWord={vi.fn()}
+          onStartOver={vi.fn()}
+          onEditConfiguration={vi.fn()}
+          leadSaved={false}
+          loadingAction={false}
       />,
     );
 
@@ -580,9 +591,12 @@ describe("ResultsPanel", () => {
           recommendation={recommendationResponse as Recommendation}
           submittedValues={submittedValues}
           reportHtml="<html><body>Report</body></html>"
+          reportReady={true}
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
+          onDownloadPdf={vi.fn()}
+          onDownloadWord={vi.fn()}
           onStartOver={vi.fn()}
           onEditConfiguration={vi.fn()}
           leadSaved={false}

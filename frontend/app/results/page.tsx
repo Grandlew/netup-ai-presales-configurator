@@ -16,6 +16,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const payload = getResultsPayload();
   const [reportHtml, setReportHtml] = useState<string | null>(null);
+  const [reportId, setReportId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState(false);
   const [startOverOpen, setStartOverOpen] = useState(false);
@@ -68,22 +69,54 @@ export default function ResultsPage() {
         setLeadId(resolvedLeadId);
       }
 
-      if (!reportHtml) {
+      let resolvedReportId = reportId;
+
+      if (!reportHtml || !resolvedReportId) {
         const report = await api.createReport({
           lead_id: resolvedLeadId,
           requirements: resultsPayload.submittedValues,
           recommendation: resultsPayload.recommendation,
         });
         setReportHtml(report.generated_content);
+        resolvedReportId = report.id;
+        setReportId(report.id);
       }
 
       setBanner({ kind: "success", message: successMessage });
-      return true;
+      return { ok: true, reportId: resolvedReportId };
     } catch (err) {
       setBanner({ kind: "error", message: err instanceof Error ? err.message : "We could not save the lead details." });
-      return false;
+      return { ok: false, reportId: null };
     } finally {
       setLoadingAction(false);
+    }
+  }
+
+  async function handleReportAction(successMessage: string) {
+    const result = await ensureLeadAndReport(successMessage);
+    return result.ok;
+  }
+
+  async function handleDownload(format: "pdf" | "doc") {
+    const result = await ensureLeadAndReport(
+      format === "pdf"
+        ? "The PDF report is being prepared for download."
+        : "The Word report is being prepared for download.",
+    );
+    if (!result.ok || !result.reportId) return false;
+
+    try {
+      const blob = await api.downloadReport(result.reportId, format);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `netup-preliminary-report.${format}`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      return true;
+    } catch (err) {
+      setBanner({ kind: "error", message: err instanceof Error ? err.message : "We could not download the report." });
+      return false;
     }
   }
 
@@ -129,9 +162,12 @@ export default function ResultsPage() {
           recommendation={resultsPayload.recommendation}
           submittedValues={resultsPayload.submittedValues}
           reportHtml={reportHtml}
-          onRequestEngineeringReview={() => ensureLeadAndReport("Engineering review has been requested and the lead was saved.")}
-          onSaveLead={() => ensureLeadAndReport("Lead saved successfully for follow-up.")}
-          onPrintReport={() => ensureLeadAndReport("The preliminary report is ready below for printing or download.")}
+          reportReady={Boolean(reportId)}
+          onRequestEngineeringReview={() => handleReportAction("Engineering review has been requested and the lead was saved.")}
+          onSaveLead={() => handleReportAction("Lead saved successfully for follow-up.")}
+          onPrintReport={() => handleReportAction("The preliminary report is ready below for printing or download.")}
+          onDownloadPdf={() => handleDownload("pdf")}
+          onDownloadWord={() => handleDownload("doc")}
           onStartOver={() => setStartOverOpen(true)}
           onEditConfiguration={handleEditConfiguration}
           leadSaved={Boolean(leadId)}

@@ -52,6 +52,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const rawText = await response.text();
+    throw new ApiError(rawText || `Request failed with status ${response.status}`, response.status, null);
+  }
+
+  return response.blob();
+}
+
 export const api = {
   options: () => request<ConfigOptionsResponse>("/api/config/options"),
   recommend: (body: Record<string, unknown>) =>
@@ -65,4 +82,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  downloadReport: (reportId: string, format: "pdf" | "doc") =>
+    requestBlob(`/api/reports/${reportId}/download?format=${format}`),
 };
