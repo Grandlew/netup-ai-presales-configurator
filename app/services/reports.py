@@ -111,6 +111,9 @@ def render_report_pdf(report_html: str) -> bytes:
 
 def _html_to_text_lines(report_html: str) -> list[str]:
     normalized = report_html.replace("\r", "")
+    normalized = re.sub(r"<style\b[^>]*>.*?</style>", "", normalized, flags=re.IGNORECASE | re.DOTALL)
+    normalized = re.sub(r"<script\b[^>]*>.*?</script>", "", normalized, flags=re.IGNORECASE | re.DOTALL)
+    normalized = re.sub(r"<head\b[^>]*>.*?</head>", "", normalized, flags=re.IGNORECASE | re.DOTALL)
     normalized = re.sub(r"</(h1|h2|h3|p|li|div|ul|footer)>", "\n", normalized, flags=re.IGNORECASE)
     normalized = re.sub(r"<li>", "- ", normalized, flags=re.IGNORECASE)
     normalized = re.sub(r"<br\s*/?>", "\n", normalized, flags=re.IGNORECASE)
