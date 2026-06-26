@@ -76,6 +76,8 @@ const recommendationResponse = {
     },
   ],
   capacity: {
+    assumed_concurrent_viewers: 100,
+    delivery_assumption: "Local network multicast with OTT-ready sizing guardrails.",
     unicast_bandwidth_formula: "100 viewers x 6 Mbps x safety factor",
     base_bandwidth_mbps: 600,
     safety_adjusted_bandwidth_mbps: 806.4,
@@ -331,7 +333,7 @@ describe("Wizard", () => {
     expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Missing information" })).toBeInTheDocument();
-    expect(screen.getByText("NetUP IPTV Combine 8x")).toBeInTheDocument();
+    expect(screen.getAllByText("NetUP IPTV Combine 8x").length).toBeGreaterThan(0);
     expect(screen.getAllByText("806.4 Mbps").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
   }, 10000);
@@ -511,6 +513,7 @@ describe("ResultsPanel", () => {
         submittedValues={{ ...submittedValues, delivery_mode: "internet_ott", services: ["live_tv"], viewer_devices: ["smart_tv", "set_top_box"], signal_sources: ["ip_streams"] }}
         reportHtml="<html><body>Report</body></html>"
         reportReady={true}
+        reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
@@ -523,10 +526,10 @@ describe("ResultsPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Internet / OTT")).toBeInTheDocument();
-    expect(screen.getByText("Live TV")).toBeInTheDocument();
-    expect(screen.getByText("Smart TV, Set-top box")).toBeInTheDocument();
-    expect(screen.getByText("Existing IP streams")).toBeInTheDocument();
+    expect(screen.getAllByText("Internet / OTT").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Live TV").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Smart TV, Set-top box").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Existing IP streams").length).toBeGreaterThan(0);
   });
 
   it("shows a formatted generated date and recommendation reference number", () => {
@@ -539,6 +542,7 @@ describe("ResultsPanel", () => {
           recommendation={recommendationResponse as Recommendation}
           submittedValues={submittedValues}
           reportReady={false}
+          reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
@@ -565,6 +569,7 @@ describe("ResultsPanel", () => {
           recommendation={recommendationResponse as Recommendation}
           submittedValues={submittedValues}
           reportReady={false}
+          reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
@@ -577,10 +582,95 @@ describe("ResultsPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Matched rule conditions")).toBeInTheDocument();
-    expect(screen.getByText("Project type: Hotel")).toBeInTheDocument();
-    expect(screen.getByText("Delivery mode: Local network")).toBeInTheDocument();
-    expect(screen.getByText("Matched rule reference: hotel-core-01")).toBeInTheDocument();
+    expect(screen.getAllByText("Why this was selected").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Project type").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Hotel").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Delivery mode").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Local network").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Matched rule reference").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("hotel-core-01").length).toBeGreaterThan(0);
+  });
+
+  it("renders the deterministic architecture diagram without unknown placeholder nodes", () => {
+    render(
+      <ResultsPanel
+        recommendation={recommendationResponse as Recommendation}
+        submittedValues={submittedValues}
+        reportReady={false}
+        reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
+        onRequestEngineeringReview={vi.fn()}
+        onSaveLead={vi.fn()}
+        onPrintReport={vi.fn()}
+        onDownloadPdf={vi.fn()}
+        onDownloadWord={vi.fn()}
+        onStartOver={vi.fn()}
+        onEditConfiguration={vi.fn()}
+        leadSaved={false}
+        loadingAction={false}
+      />,
+    );
+
+    expect(screen.getByTestId("architecture-diagram")).toBeInTheDocument();
+    expect(screen.getAllByText("Existing IP streams").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("NetUP IPTV Combine 8x").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Smart TV, Set-top box").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps a single start-over action and orders the action buttons as specified", () => {
+    render(
+      <ResultsPanel
+        recommendation={recommendationResponse as Recommendation}
+        submittedValues={submittedValues}
+        reportReady={false}
+        reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
+        onRequestEngineeringReview={vi.fn()}
+        onSaveLead={vi.fn()}
+        onPrintReport={vi.fn()}
+        onDownloadPdf={vi.fn()}
+        onDownloadWord={vi.fn()}
+        onStartOver={vi.fn()}
+        onEditConfiguration={vi.fn()}
+        leadSaved={false}
+        loadingAction={false}
+      />,
+    );
+
+    const actionButtons = screen.getByTestId("actions-card").querySelectorAll("button");
+    expect(screen.getAllByRole("button", { name: "Start over" })).toHaveLength(1);
+    expect(Array.from(actionButtons).map((button) => button.textContent?.trim())).toEqual([
+      "Request engineering review",
+      "Download preliminary report",
+      "Save lead",
+      "Edit configuration",
+      "Start over",
+    ]);
+  });
+
+  it("uses the generated report filename for the HTML preview download", () => {
+    render(
+      <ResultsPanel
+        recommendation={recommendationResponse as Recommendation}
+        submittedValues={submittedValues}
+        reportHtml="<html><body>Report</body></html>"
+        reportReady={true}
+        reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
+        onRequestEngineeringReview={vi.fn()}
+        onSaveLead={vi.fn()}
+        onPrintReport={vi.fn()}
+        onDownloadPdf={vi.fn()}
+        onDownloadWord={vi.fn()}
+        onStartOver={vi.fn()}
+        onEditConfiguration={vi.fn()}
+        leadSaved={false}
+        loadingAction={false}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Download HTML" })).toHaveAttribute(
+      "download",
+      "netup-preliminary-recommendation-REC-20260625-12345.html",
+    );
   });
 
   it("marks results content as print-friendly by hiding navigation controls and duplicate renderers", () => {
@@ -592,6 +682,7 @@ describe("ResultsPanel", () => {
           submittedValues={submittedValues}
           reportHtml="<html><body>Report</body></html>"
           reportReady={true}
+          reportFileName="netup-preliminary-recommendation-REC-20260625-12345"
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ResultsPanel } from "@/components/results-panel";
 import { api } from "@/lib/api";
 import { clearResultsPayload, getResultsPayload, type ResultsPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
+import { buildReferenceNumber, buildReportFileName } from "@/lib/recommendation-presentation";
 
 type BannerState =
   | { kind: "success"; message: string }
@@ -22,11 +23,18 @@ export default function ResultsPage() {
   const [loadingAction, setLoadingAction] = useState(false);
   const [startOverOpen, setStartOverOpen] = useState(false);
   const [banner, setBanner] = useState<BannerState>(null);
+  const [saveLeadSuccess, setSaveLeadSuccess] = useState(false);
 
   useEffect(() => {
     setPayload(getResultsPayload());
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!saveLeadSuccess) return;
+    const timeoutId = window.setTimeout(() => setSaveLeadSuccess(false), 2500);
+    return () => window.clearTimeout(timeoutId);
+  }, [saveLeadSuccess]);
 
   if (!hydrated) {
     return (
@@ -60,8 +68,10 @@ export default function ResultsPage() {
   }
 
   const resultsPayload = payload;
+  const referenceNumber = buildReferenceNumber(resultsPayload.recommendation, resultsPayload.submittedValues);
+  const reportFileName = buildReportFileName(referenceNumber);
 
-  async function ensureLeadAndReport(successMessage: string) {
+  async function ensureLeadAndReport(successMessage: string, action: "review" | "save" | "report" = "report") {
     setLoadingAction(true);
     setBanner(null);
 
@@ -101,6 +111,9 @@ export default function ResultsPage() {
       }
 
       setBanner({ kind: "success", message: successMessage });
+      if (action === "save") {
+        setSaveLeadSuccess(true);
+      }
       return { ok: true, reportId: resolvedReportId };
     } catch (err) {
       setBanner({ kind: "error", message: err instanceof Error ? err.message : "We could not save the lead details." });
@@ -108,11 +121,6 @@ export default function ResultsPage() {
     } finally {
       setLoadingAction(false);
     }
-  }
-
-  async function handleReportAction(successMessage: string) {
-    const result = await ensureLeadAndReport(successMessage);
-    return result.ok;
   }
 
   async function handleDownload(format: "pdf" | "doc") {
@@ -128,7 +136,7 @@ export default function ResultsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `netup-preliminary-report.${format}`;
+      link.download = `${reportFileName}.${format}`;
       link.click();
       window.URL.revokeObjectURL(url);
       return true;
@@ -156,16 +164,7 @@ export default function ResultsPage() {
   return (
     <main className="shell">
       <div className="space-y-5">
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={handleEditConfiguration}
-            className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-          >
-            Back to configurator
-          </button>
-          <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
-        </div>
+        <p className="text-sm uppercase tracking-[0.28em] text-blue print:hidden">NetUP AI Presales Configurator</p>
 
         {banner ? (
           <div
@@ -181,14 +180,15 @@ export default function ResultsPage() {
           submittedValues={resultsPayload.submittedValues}
           reportHtml={reportHtml}
           reportReady={Boolean(reportId)}
-          onRequestEngineeringReview={() => handleReportAction("Engineering review has been requested and the lead was saved.")}
-          onSaveLead={() => handleReportAction("Lead saved successfully for follow-up.")}
-          onPrintReport={() => handleReportAction("The preliminary report is ready below for printing or download.")}
+          reportFileName={reportFileName}
+          onRequestEngineeringReview={() => ensureLeadAndReport("Engineering review has been requested and the lead was saved.", "review").then((result) => result.ok)}
+          onSaveLead={() => ensureLeadAndReport("Lead saved successfully for follow-up.", "save").then((result) => result.ok)}
+          onPrintReport={() => ensureLeadAndReport("The preliminary report is ready below for printing or download.", "report").then((result) => result.ok)}
           onDownloadPdf={() => handleDownload("pdf")}
           onDownloadWord={() => handleDownload("doc")}
           onStartOver={() => setStartOverOpen(true)}
           onEditConfiguration={handleEditConfiguration}
-          leadSaved={Boolean(leadId)}
+          leadSaved={saveLeadSuccess || Boolean(leadId)}
           loadingAction={loadingAction}
         />
       </div>

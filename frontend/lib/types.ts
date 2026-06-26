@@ -22,6 +22,8 @@ export type Recommendation = {
     warning?: string | null;
   }[];
   capacity: {
+    assumed_concurrent_viewers: number;
+    delivery_assumption: string;
     unicast_bandwidth_formula: string;
     base_bandwidth_mbps: number;
     safety_adjusted_bandwidth_mbps: number;
