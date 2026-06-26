@@ -704,14 +704,14 @@ describe("HomePage layout", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Review extracted project details" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Complete missing required information")).toBeInTheDocument();
+    expect(screen.getByText("Customer confirmation form")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: /Delivery mode/i })).toBeInTheDocument();
 
     await user.selectOptions(screen.getByRole("combobox", { name: /Delivery mode/i }), "local_network");
-    await user.click(screen.getByRole("button", { name: "Continue with these details" }));
+    await user.click(screen.getByRole("button", { name: "Open guided configurator" }));
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Describe my project instead" })).toBeInTheDocument();
@@ -719,6 +719,51 @@ describe("HomePage layout", () => {
 
     expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("hotel");
     expect(screen.getByRole("spinbutton", { name: /Number of rooms/i })).toHaveValue(180);
+  });
+
+  it("lets the user edit extracted fields and unlocks a continue-to-recommendation shortcut when required fields are complete", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {
+        project_type: "hotel",
+        subscribers_or_rooms: 180,
+        number_of_channels: 85,
+        signal_sources: ["satellite", "ip_streams"],
+        services: ["catchup_tv"],
+        viewer_devices: ["smart_tv", "mobile"],
+        delivery_mode: "local_network",
+      },
+      missing_required_fields: [],
+      next_question: null,
+      ready_for_recommendation: true,
+      ai_available: true,
+      extraction_succeeded: true,
+      error_code: null,
+      message: null,
+    });
+
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "We have a 180-room hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "Continue to recommendation" })).toBeInTheDocument();
+
+    await user.clear(screen.getByRole("spinbutton", { name: /Rooms or subscribers/i }));
+    await user.type(screen.getByRole("spinbutton", { name: /Rooms or subscribers/i }), "220");
+    await user.click(screen.getByRole("button", { name: "Continue to recommendation" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Capacity and reliability" })).toBeInTheDocument();
+    });
   });
 
   it("renders all seven complete step labels without truncation in desktop navigation", async () => {

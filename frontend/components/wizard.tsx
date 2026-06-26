@@ -88,6 +88,7 @@ export function Wizard({
   focusRequestSignal = 0,
   seedValues,
   seedSignal = 0,
+  seedStartStep = 0,
   onDescribeProjectInstead,
 }: {
   options: ConfigOptionsResponse;
@@ -96,6 +97,7 @@ export function Wizard({
   focusRequestSignal?: number;
   seedValues?: Partial<WizardFormValues> | Record<string, unknown> | null;
   seedSignal?: number;
+  seedStartStep?: number;
   onDescribeProjectInstead?: () => void;
 }) {
   const [step, setStep] = useState(0);
@@ -184,9 +186,9 @@ export function Wizard({
     setLeadId(null);
     setSubmitError(null);
     setBanner({ kind: "info", message: "Extracted project details were added to the guided configurator. Review and complete the remaining fields." });
-    setMaxUnlockedStep(0);
-    setStep(0);
-  }, [form, seedSignal, seedValues]);
+    setMaxUnlockedStep(seedStartStep);
+    setStep(seedStartStep);
+  }, [form, seedSignal, seedStartStep, seedValues]);
 
   const canGoBack = step > 0 && !loading && !savingLead;
 

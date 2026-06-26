@@ -18,6 +18,7 @@ export default function HomePage() {
   const [modeAnnouncement, setModeAnnouncement] = useState("");
   const [wizardSeedValues, setWizardSeedValues] = useState<Record<string, unknown> | null>(null);
   const [wizardSeedSignal, setWizardSeedSignal] = useState(0);
+  const [wizardSeedStep, setWizardSeedStep] = useState(0);
   const [conversationReview, setConversationReview] = useState<{ response: ExtractResponse; originalMessage: string } | null>(null);
   const wizardRef = useRef<HTMLDivElement | null>(null);
 
@@ -28,9 +29,10 @@ export default function HomePage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load configurator options."));
   }, []);
 
-  function focusWizard(seedValues?: Record<string, unknown>) {
+  function focusWizard(seedValues?: Record<string, unknown>, seedStep = 0) {
     if (seedValues) {
       setWizardSeedValues(seedValues);
+      setWizardSeedStep(seedStep);
       setWizardSeedSignal((current) => current + 1);
     }
     setEntryMode("guided");
@@ -84,6 +86,7 @@ export default function HomePage() {
               focusRequestSignal={guidedFocusSignal}
               seedValues={wizardSeedValues}
               seedSignal={wizardSeedSignal}
+              seedStartStep={wizardSeedStep}
               onDescribeProjectInstead={entryMode === "guided" && !resultsViewActive ? showConversationMode : undefined}
             />
           ) : (
