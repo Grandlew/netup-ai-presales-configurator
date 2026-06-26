@@ -1,93 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiError, api } from "@/lib/api";
 import type { ExtractResponse } from "@/lib/types";
 
 const MAX_MESSAGE_LENGTH = 600;
 
-const ENUM_LABELS: Record<string, string> = {
-  catchup_tv: "Catch-up TV",
-  internet_ott: "Internet / OTT",
-  ip_streams: "Existing IP streams",
-  live_tv: "Live TV",
-  local_network: "Local network",
-  mobile: "Mobile",
-  set_top_box: "Set-top box",
-  smart_tv: "Smart TV",
-};
-
-const FIELD_LABELS: Record<string, string> = {
-  additional_project_notes: "Additional notes",
-  adaptive_bitrate_required: "Adaptive bitrate required",
-  archive_days: "Archive days",
-  available_storage_tb: "Available storage",
-  average_channel_bitrate_mbps: "Average channel bitrate",
-  company_name: "Company name",
-  country: "Country",
-  delivery_mode: "Delivery mode",
-  expected_concurrent_viewers: "Expected concurrent viewers",
-  number_of_channels: "Number of channels",
-  output_type: "Output type",
-  project_type: "Project type",
-  redundancy_required: "Redundancy required",
-  services: "Required services",
-  signal_source_details: "Signal source details",
-  signal_sources: "Signal sources",
-  subscribers_or_rooms: "Rooms or subscribers",
-  viewer_devices: "Viewer devices",
-};
-
 function Spinner() {
   return <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" aria-hidden="true" />;
-}
-
-function humanizeKey(value: string) {
-  if (FIELD_LABELS[value]) return FIELD_LABELS[value];
-  if (ENUM_LABELS[value]) return ENUM_LABELS[value];
-  return value
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-}
-
-function hasDisplayableValue(value: unknown): boolean {
-  if (value === null || value === undefined || value === "") return false;
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
-  return true;
-}
-
-function formatPrimitive(value: unknown) {
-  if (value === null || value === undefined || value === "") return "Not provided";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "number") return new Intl.NumberFormat("en-US").format(value);
-  if (typeof value === "string") return humanizeKey(value);
-  return String(value);
-}
-
-function renderExtractedValue(value: unknown): ReactNode {
-  if (Array.isArray(value)) return value.map((item) => formatPrimitive(item)).join(", ");
-
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    if (!entries.length) return "No additional details";
-
-    return (
-      <div className="grid gap-2">
-        {entries.map(([key, nestedValue]) => (
-          <div key={key} className="grid gap-1 rounded-2xl bg-paper px-3 py-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{humanizeKey(key)}</span>
-            <span className="text-sm text-ink">{formatPrimitive(nestedValue)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return formatPrimitive(value);
 }
 
 function getClientErrorMessage(error: unknown) {
@@ -97,31 +18,27 @@ function getClientErrorMessage(error: unknown) {
 
 export function ConversationPanel({
   onUseGuidedConfigurator,
+  onExtractionSuccess,
   resetSignal = 0,
 }: {
   onUseGuidedConfigurator?: () => void;
+  onExtractionSuccess?: (response: ExtractResponse, message: string) => void;
   resetSignal?: number;
 }) {
   const [message, setMessage] = useState("");
-  const [response, setResponse] = useState<ExtractResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
 
   useEffect(() => {
     setMessage("");
-    setResponse(null);
     setError(null);
     setLoading(false);
+    setAiUnavailable(false);
   }, [resetSignal]);
 
   const trimmedMessage = message.trim();
-  const showExtractionResults = response?.extraction_succeeded === true;
-  const aiUnavailable = response?.ai_available === false;
-  const extractedEntries = useMemo(
-    () =>
-      Object.entries(response?.extracted_requirements ?? {}).filter(([, value]) => hasDisplayableValue(value)),
-    [response],
-  );
+  const showRetry = Boolean(trimmedMessage) && Boolean(error) && !loading && !aiUnavailable;
 
   const handleSubmit = async () => {
     if (!trimmedMessage || loading || aiUnavailable) return;
@@ -131,21 +48,22 @@ export function ConversationPanel({
     try {
       const result = await api.extract({
         message: trimmedMessage,
-        current_requirements: response?.extraction_succeeded ? response.extracted_requirements : {},
+        current_requirements: {},
       });
-      setResponse(result);
-      if (!result.extraction_succeeded && result.message) {
-        setError(result.message);
+
+      if (result.extraction_succeeded) {
+        onExtractionSuccess?.(result, trimmedMessage);
+        return;
       }
+
+      setAiUnavailable(!result.ai_available);
+      setError(result.message ?? "We could not extract the project requirements. Please try again.");
     } catch (err) {
-      setResponse(null);
       setError(getClientErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
-
-  const showRetry = Boolean(trimmedMessage) && !loading && !aiUnavailable && (Boolean(error) || response?.extraction_succeeded === false);
 
   return (
     <div className="panel p-5 md:p-6">
@@ -197,13 +115,12 @@ export function ConversationPanel({
       </div>
 
       <div aria-live="assertive" className="mt-4 space-y-3">
-        {response && !response.extraction_succeeded ? (
+        {error ? (
           <div className={`rounded-2xl px-4 py-3 text-sm ${aiUnavailable ? "border border-blue/20 bg-blue-50 text-slate-700" : "border border-red-200 bg-red-50 text-red-700"}`}>
-            <p>{response.message ?? "We could not extract the project requirements. Please try again."}</p>
+            <p>{error}</p>
             {aiUnavailable ? <p className="mt-1 text-slate-600">You can continue with the guided configurator.</p> : null}
           </div>
         ) : null}
-        {!response && error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       </div>
 
       {showRetry ? (
@@ -215,42 +132,6 @@ export function ConversationPanel({
           >
             Retry
           </button>
-        </div>
-      ) : null}
-
-      {showExtractionResults ? (
-        <div className="mt-5 space-y-4">
-          <div className="rounded-2xl bg-paper p-4 text-sm text-slate-700">
-            <h3 className="text-base font-semibold text-ink">Extracted fields</h3>
-            <dl className="mt-3 grid gap-3">
-              {extractedEntries.map(([key, value]) => (
-                <div key={key} className="grid gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{humanizeKey(key)}</dt>
-                  <dd className="text-sm text-ink">{renderExtractedValue(value)}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <div className="rounded-2xl bg-paper p-4 text-sm text-slate-700">
-            <h3 className="text-base font-semibold text-ink">Missing required information</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {response.missing_required_fields.length ? (
-                response.missing_required_fields.map((item) => (
-                  <span key={item} className="rounded-full bg-white px-3 py-1 text-sm text-ink ring-1 ring-slate-200">
-                    {item}
-                  </span>
-                ))
-              ) : (
-                <span className="rounded-full bg-white px-3 py-1 text-sm text-ink ring-1 ring-slate-200">No major gaps detected</span>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-paper p-4 text-sm text-slate-700">
-            <h3 className="text-base font-semibold text-ink">Follow-up question</h3>
-            <p className="mt-3">{response.next_question ?? "The project is ready for a deterministic recommendation."}</p>
-          </div>
         </div>
       ) : null}
     </div>

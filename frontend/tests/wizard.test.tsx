@@ -347,24 +347,17 @@ describe("Wizard", () => {
 });
 
 describe("ConversationPanel", () => {
-  it("renders only successfully extracted fields with human-readable labels", async () => {
+  it("passes successful extraction results to the review flow", async () => {
     const user = userEvent.setup();
-    render(<ConversationPanel />);
+    const onExtractionSuccess = vi.fn();
+    render(<ConversationPanel onExtractionSuccess={onExtractionSuccess} />);
 
     await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Extracted fields")).toBeInTheDocument();
+      expect(onExtractionSuccess).toHaveBeenCalledTimes(1);
     });
-
-    expect(screen.getByText("Project type")).toBeInTheDocument();
-    expect(screen.getByText("Hotel")).toBeInTheDocument();
-    expect(screen.getByText("Rooms or subscribers")).toBeInTheDocument();
-    expect(screen.queryByText("Country")).not.toBeInTheDocument();
-    expect(screen.getByText("Missing required information")).toBeInTheDocument();
-    expect(screen.getByText("Follow-up question")).toBeInTheDocument();
-    expect(screen.getByText("How many TV channels do you expect to distribute?")).toBeInTheDocument();
   });
 
   it("keeps the guided configurator available after a failed extraction and preserves textarea content", async () => {
@@ -390,7 +383,6 @@ describe("ConversationPanel", () => {
       expect(screen.getByText("We could not extract the project requirements. Please try again.")).toBeInTheDocument();
     });
 
-    expect(screen.queryByText("Extracted fields")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText(/We have a 180-room hotel/i)).toHaveValue("Hotel project with LG TVs");
     expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeEnabled();
@@ -401,6 +393,7 @@ describe("ConversationPanel", () => {
 
   it("retries after a failed extraction request", async () => {
     const user = userEvent.setup();
+    const onExtractionSuccess = vi.fn();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
       missing_required_fields: [],
@@ -429,7 +422,7 @@ describe("ConversationPanel", () => {
       message: null,
     });
 
-    render(<ConversationPanel />);
+    render(<ConversationPanel onExtractionSuccess={onExtractionSuccess} />);
 
     await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
@@ -441,14 +434,8 @@ describe("ConversationPanel", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Signal source details")).toBeInTheDocument();
+      expect(onExtractionSuccess).toHaveBeenCalledTimes(1);
     });
-
-    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
-    expect(screen.getByText("Smart Tv Brand")).toBeInTheDocument();
-    expect(screen.getByText("LG")).toBeInTheDocument();
-    expect(screen.getByText("Existing IP streams")).toBeInTheDocument();
-    expect(screen.getByText("Catch-up TV")).toBeInTheDocument();
   });
 
   it("shows AI unavailable only when the service is not configured", async () => {
@@ -682,6 +669,53 @@ describe("HomePage layout", () => {
     expect(screen.getByRole("heading", { name: "Natural-language intake" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
+
+    expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("hotel");
+    expect(screen.getByRole("spinbutton", { name: /Number of subscribers, rooms, or endpoints/i })).toHaveValue(180);
+  });
+
+  it("shows extracted results on a separate review screen and lets the user fill missing info before continuing", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.extract).mockResolvedValueOnce({
+      extracted_requirements: {
+        project_type: "hotel",
+        subscribers_or_rooms: 180,
+        number_of_channels: 85,
+        signal_sources: ["satellite", "ip_streams"],
+        services: ["catchup_tv"],
+        viewer_devices: ["smart_tv", "mobile"],
+      },
+      missing_required_fields: ["Delivery mode"],
+      next_question: "Will delivery stay on a local network, go over OTT/internet, or both?",
+      ready_for_recommendation: false,
+      ai_available: true,
+      extraction_succeeded: true,
+      error_code: null,
+      message: null,
+    });
+
+    render(<HomePage />);
+
+    await waitFor(() => {
+      expect(api.options).toHaveBeenCalled();
+    });
+
+    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "We have a 180-room hotel project");
+    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Review extracted project details" })).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Complete missing required information")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /Delivery mode/i })).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /Delivery mode/i }), "local_network");
+    await user.click(screen.getByRole("button", { name: "Continue with these details" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Describe my project instead" })).toBeInTheDocument();
+    });
 
     expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("hotel");
     expect(screen.getByRole("spinbutton", { name: /Number of rooms/i })).toHaveValue(180);

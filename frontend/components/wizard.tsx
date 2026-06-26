@@ -86,12 +86,16 @@ export function Wizard({
   onStartOver,
   onResultsViewChange,
   focusRequestSignal = 0,
+  seedValues,
+  seedSignal = 0,
   onDescribeProjectInstead,
 }: {
   options: ConfigOptionsResponse;
   onStartOver?: () => void;
   onResultsViewChange?: (active: boolean) => void;
   focusRequestSignal?: number;
+  seedValues?: Partial<WizardFormValues> | Record<string, unknown> | null;
+  seedSignal?: number;
   onDescribeProjectInstead?: () => void;
 }) {
   const [step, setStep] = useState(0);
@@ -157,6 +161,32 @@ export function Wizard({
       });
     });
   }, [focusRequestSignal, form]);
+
+  useEffect(() => {
+    if (!seedSignal || !seedValues) return;
+
+    form.reset({
+      signal_sources: [],
+      services: [],
+      viewer_devices: [],
+      adaptive_bitrate_required: false,
+      output_type: "ip",
+      redundancy_required: false,
+      average_channel_bitrate_mbps: 6,
+      archive_days: 0,
+      consent_given: false as never,
+      ...(seedValues as Partial<WizardFormValues>),
+    });
+    setAttemptedSteps([]);
+    setRecommendation(null);
+    setSubmittedValues(null);
+    setReportHtml(null);
+    setLeadId(null);
+    setSubmitError(null);
+    setBanner({ kind: "info", message: "Extracted project details were added to the guided configurator. Review and complete the remaining fields." });
+    setMaxUnlockedStep(0);
+    setStep(0);
+  }, [form, seedSignal, seedValues]);
 
   const canGoBack = step > 0 && !loading && !savingLead;
 
