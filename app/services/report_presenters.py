@@ -39,6 +39,19 @@ ENUM_LABELS = {
     "hdmi_sdi": "HDMI / SDI",
     "ip": "IP",
     "dvb_c_qam": "DVB-C / QAM",
+    "hotel_wifi_only": "Hotel Wi-Fi only",
+    "off_property_access": "Outside the property",
+    "staff_internal_only": "Staff/internal only",
+    "ethernet": "Ethernet",
+    "wifi": "Wi-Fi",
+    "coaxial": "Coaxial cable",
+    "hybrid": "Hybrid network",
+    "confirmed": "Confirmed",
+    "calculated": "Calculated",
+    "inferred": "Inferred",
+    "conditional": "Conditional",
+    "unknown": "Unknown",
+    "provisional": "Provisional",
 }
 
 
@@ -96,8 +109,6 @@ def build_project_title(requirements: CustomerRequirements, recommendation: Reco
 
 def get_matched_conditions(requirements: CustomerRequirements, recommendation_item) -> list[tuple[str, str]]:
     conditions: list[tuple[str, str]] = []
-    if recommendation_item.rule_id:
-        conditions.append(("Matched rule reference", recommendation_item.rule_id))
     if requirements.project_type:
         conditions.append(("Project type", format_enum_label(requirements.project_type.value)))
     if requirements.subscribers_or_rooms:
@@ -118,6 +129,12 @@ def get_matched_conditions(requirements: CustomerRequirements, recommendation_it
         conditions.append(("Output type", format_enum_label(requirements.output_type.value)))
     if requirements.adaptive_bitrate_required:
         conditions.append(("Adaptive bitrate", "Required"))
+    if requirements.hotel_tv_brand:
+        conditions.append(("Hotel TV brand", requirements.hotel_tv_brand))
+    if requirements.hotel_tv_model:
+        conditions.append(("Hotel TV model", requirements.hotel_tv_model))
+    if requirements.mobile_viewing_scope:
+        conditions.append(("Mobile scope", format_enum_label(requirements.mobile_viewing_scope.value)))
     return conditions
 
 
@@ -131,6 +148,12 @@ def get_visible_product_warning(warning: str | None) -> str | None:
 
 
 def get_architecture_stages(requirements: CustomerRequirements, recommendation: RecommendationResponse) -> list[tuple[str, list[str]]]:
+    if recommendation.recommended_architecture and recommendation.recommended_architecture.branches:
+        stages: list[tuple[str, list[str]]] = []
+        for branch in recommendation.recommended_architecture.branches:
+            stages.append((branch.name, [node.label for node in branch.nodes]))
+        return stages
+
     stages: list[tuple[str, list[str]]] = []
     if requirements.signal_sources:
         stages.append(("Signal sources", [format_enum_label(item.value) for item in requirements.signal_sources]))

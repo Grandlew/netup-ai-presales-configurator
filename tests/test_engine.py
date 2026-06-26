@@ -1,5 +1,5 @@
 from app.engine import estimate_capacity, recommend
-from app.schemas import CustomerRequirements
+from app.schemas import ClaimStatus, CustomerRequirements
 
 
 def sample_hotel_requirements() -> CustomerRequirements:
@@ -10,11 +10,11 @@ def sample_hotel_requirements() -> CustomerRequirements:
         expected_concurrent_viewers=100,
         number_of_channels=85,
         signal_sources=["satellite", "ip_streams"],
-        services=["live_tv", "epg", "catchup_tv", "video_on_demand"],
+        services=["live_tv", "epg", "catchup_tv"],
         viewer_devices=["smart_tv", "mobile"],
-        delivery_mode="both",
-        adaptive_bitrate_required=True,
-        archive_days=7,
+        delivery_mode="internet_ott",
+        adaptive_bitrate_required=False,
+        archive_days=0,
         budget_range="To be discussed",
         target_launch_date="2026-Q4",
         contact_name="Jane Doe",
@@ -23,19 +23,18 @@ def sample_hotel_requirements() -> CustomerRequirements:
     )
 
 
-def test_hotel_ott_recommendation():
+def test_hotel_example_does_not_duplicate_headend_functions():
     result = recommend(sample_hotel_requirements())
     names = {item.product for item in result.recommendations}
 
     assert "NetUP IPTV Combine 8x" in names
-    assert "NetUP DVB-IP Streamer" in names
+    assert "NetUP DVB IP Streamer" not in names
     assert "NetUP Stream Processor" in names
-    assert "NetUP VoD capability" in names
-    assert result.capacity.estimated_archive_storage_tb > 0
     assert result.rule_version == "2026.06-mvp"
+    assert result.audit_trace["overlaps_found"][0]["resolution"] == "duplicate_removed"
 
 
-def test_large_operator_gets_complex():
+def test_large_operator_keeps_provisional_operator_stack():
     req = CustomerRequirements(
         project_type="large_operator",
         subscribers_or_rooms=50_000,
@@ -60,13 +59,41 @@ def test_capacity_formula_uses_safety_margin():
 
     assert result.base_bandwidth_mbps == 600
     assert result.safety_adjusted_bandwidth_mbps > result.base_bandwidth_mbps
-    assert "x 6.0 Mbps" in result.unicast_bandwidth_formula
+    assert "x 6 Mbps" in result.unicast_bandwidth_formula
 
 
-def test_missing_storage_is_reported_when_archive_requested():
-    req = sample_hotel_requirements().model_copy(update={"available_storage_tb": None})
+def test_catchup_storage_is_pending_when_retention_is_missing():
+    result = recommend(sample_hotel_requirements())
+    assert result.capacity.storage_status == ClaimStatus.UNKNOWN
+    assert result.capacity.storage_status_message is not None
+    assert "Catch-up retention period" in result.missing_information
+    assert result.readiness.capacity_estimate_ready is False
+
+
+def test_smart_tv_compatibility_stays_conditional_without_model_confirmation():
+    result = recommend(sample_hotel_requirements())
+    status_by_claim = {item.claim: item.status for item in result.claim_statements}
+
+    assert status_by_claim["Native Smart TV delivery may avoid external set-top boxes."] in {
+        ClaimStatus.UNKNOWN,
+        ClaimStatus.CONDITIONAL,
+    }
+    assert "Hotel TV model and compatibility path" in result.missing_information
+
+
+def test_existing_headend_prefers_hotel_software_layer():
+    req = sample_hotel_requirements().model_copy(
+        update={
+            "existing_equipment": "Existing DVB-IP headend already installed in the hotel",
+            "delivery_mode": "both",
+        }
+    )
     result = recommend(req)
-    assert "Available storage capacity" in result.missing_information
+    names = {item.product for item in result.recommendations}
+
+    assert "NetUP.tv Hotel Software" in names
+    assert "NetUP DVB IP Streamer" not in names
+    assert "NetUP IPTV Combine 8x" not in names
 
 
 def test_duplicate_recommendations_are_suppressed():

@@ -11,13 +11,74 @@ export type ConfigOptionsResponse = {
   data_retention_note: string;
 };
 
+export type ClaimStatus = "confirmed" | "calculated" | "inferred" | "conditional" | "unknown" | "provisional";
+
+export type EvidenceReference = {
+  id: string;
+  title: string;
+  url: string;
+  publication_date?: string | null;
+  extracted_capability: string;
+  confidence: ClaimStatus;
+  reviewed_status: string;
+};
+
+export type ClaimStatement = {
+  claim: string;
+  status: ClaimStatus;
+  conditions: string[];
+  evidence_ids: string[];
+  notes?: string | null;
+};
+
+export type MissingInformationItem = {
+  code: string;
+  label: string;
+  category: string;
+  status: ClaimStatus;
+  reason: string;
+  question: string;
+};
+
+export type ArchitectureNode = {
+  id: string;
+  label: string;
+  kind: string;
+  status: ClaimStatus;
+  details: string[];
+};
+
+export type ArchitectureBranch = {
+  name: string;
+  status: ClaimStatus;
+  nodes: ArchitectureNode[];
+  note?: string | null;
+};
+
+export type ArchitectureOption = {
+  name: string;
+  status: ClaimStatus;
+  preference: string;
+  reason: string;
+  tradeoffs: string[];
+  information_required: string[];
+  branches: ArchitectureBranch[];
+};
+
 export type Recommendation = {
   project_summary: string;
   recommendations: {
+    canonical_product_id: string;
     product: string;
     category: string;
+    object_type: string;
+    role_summary: string;
     reason: string;
     rule_id?: string;
+    claim_status: ClaimStatus;
+    provided_capabilities: string[];
+    conditions: string[];
+    evidence_ids: string[];
     validation_status?: string;
     warning?: string | null;
   }[];
@@ -27,13 +88,37 @@ export type Recommendation = {
     unicast_bandwidth_formula: string;
     base_bandwidth_mbps: number;
     safety_adjusted_bandwidth_mbps: number;
+    source_ingest_bandwidth_mbps?: number | null;
+    core_network_multicast_bandwidth_mbps?: number | null;
+    local_unicast_access_bandwidth_mbps?: number | null;
+    ott_origin_egress_bandwidth_mbps?: number | null;
+    per_viewer_bandwidth_mbps: number;
+    storage_ingest_bandwidth_mbps?: number | null;
     estimated_archive_storage_tb: number;
     safety_adjusted_archive_storage_tb: number;
+    storage_status: ClaimStatus;
+    storage_status_message?: string | null;
+    archive_scope_summary?: string | null;
     assumptions: string[];
   };
   warnings: string[];
   missing_information: string[];
+  missing_information_items: MissingInformationItem[];
   assumptions: string[];
+  readiness: {
+    intake_complete: boolean;
+    preliminary_recommendation_ready: boolean;
+    capacity_estimate_ready: boolean;
+    compatibility_review_ready: boolean;
+    engineering_review_required: boolean;
+    quotation_ready: boolean;
+  };
+  claim_statements: ClaimStatement[];
+  official_references: EvidenceReference[];
+  recommended_architecture?: ArchitectureOption | null;
+  alternative_architectures: ArchitectureOption[];
+  next_question?: string | null;
+  audit_trace: Record<string, unknown>;
   rule_version: string;
   requires_engineer_review: boolean;
 };

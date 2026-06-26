@@ -36,6 +36,19 @@ const ENUM_LABELS: Record<string, string> = {
   hdmi_sdi: "HDMI / SDI",
   ip: "IP",
   dvb_c_qam: "DVB-C / QAM",
+  hotel_wifi_only: "Hotel Wi-Fi only",
+  off_property_access: "Outside the property",
+  staff_internal_only: "Staff/internal only",
+  ethernet: "Ethernet",
+  wifi: "Wi-Fi",
+  coaxial: "Coaxial cable",
+  hybrid: "Hybrid network",
+  confirmed: "Confirmed",
+  calculated: "Calculated",
+  inferred: "Inferred",
+  conditional: "Conditional",
+  unknown: "Unknown",
+  provisional: "Provisional",
 };
 
 export type ArchitectureStage = {
@@ -125,7 +138,6 @@ export function getMatchedConditions(item: Recommendation["recommendations"][num
   }
 
   const conditions = [
-    item.rule_id ? { label: "Matched rule reference", value: item.rule_id } : null,
     submittedValues.project_type ? { label: "Project type", value: formatEnumLabel(submittedValues.project_type) } : null,
     submittedValues.subscribers_or_rooms
       ? { label: "Project scale", value: `${formatNumber(submittedValues.subscribers_or_rooms, 0)} ${submittedValues.project_type === "hotel" ? "rooms" : "subscribers"}` }
@@ -137,6 +149,9 @@ export function getMatchedConditions(item: Recommendation["recommendations"][num
     submittedValues.signal_sources?.length ? { label: "Signal sources", value: submittedValues.signal_sources.map(formatEnumLabel).join(", ") } : null,
     submittedValues.output_type && submittedValues.output_type !== "ip" ? { label: "Output type", value: formatEnumLabel(submittedValues.output_type) } : null,
     submittedValues.adaptive_bitrate_required ? { label: "Adaptive bitrate", value: "Required" } : null,
+    submittedValues.hotel_tv_brand ? { label: "Hotel TV brand", value: submittedValues.hotel_tv_brand } : null,
+    submittedValues.hotel_tv_model ? { label: "Hotel TV model", value: submittedValues.hotel_tv_model } : null,
+    submittedValues.mobile_viewing_scope ? { label: "Mobile scope", value: formatEnumLabel(submittedValues.mobile_viewing_scope) } : null,
   ];
 
   return conditions.filter((condition): condition is { label: string; value: string } => Boolean(condition));
@@ -147,6 +162,24 @@ export function getDistinctItems(items: string[]) {
 }
 
 export function getArchitectureStages(recommendation: Recommendation, submittedValues?: WizardFormValues | null): ArchitectureStage[] {
+  if (recommendation.recommended_architecture?.branches?.length) {
+    return recommendation.recommended_architecture.branches.flatMap((branch) =>
+      branch.nodes.map((node) => ({
+        id: `${branch.name}-${node.id}`,
+        kind: node.kind.includes("source")
+          ? "sources"
+          : node.kind.includes("client")
+            ? "devices"
+            : node.kind.includes("network")
+              ? "delivery"
+              : node.kind.includes("software") || node.kind.includes("hardware")
+                ? "core"
+                : "core",
+        label: branch.name,
+        items: [node.label],
+      })),
+    );
+  }
   if (!submittedValues) return [];
 
   const stages: ArchitectureStage[] = [];

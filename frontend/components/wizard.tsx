@@ -44,6 +44,20 @@ const steps = [
 
 const stepTitlesCompact = ["Profile", "Sources", "Services", "Delivery", "Capacity", "Contact", "Results"] as const;
 
+const mobileViewingScopeOptions = [
+  { value: "hotel_wifi_only", label: "Hotel Wi-Fi only" },
+  { value: "off_property_access", label: "Outside the property" },
+  { value: "both", label: "Both" },
+  { value: "staff_internal_only", label: "Staff/internal only" },
+] as const;
+
+const inPropertyNetworkOptions = [
+  { value: "ethernet", label: "Ethernet" },
+  { value: "wifi", label: "Wi-Fi" },
+  { value: "coaxial", label: "Coaxial cable" },
+  { value: "hybrid", label: "Hybrid network" },
+] as const;
+
 const stepFields: Array<FieldPath<WizardFormValues>[]> = [
   ["project_type", "subscribers_or_rooms"],
   ["number_of_channels", "signal_sources"],
@@ -126,6 +140,8 @@ export function Wizard({
   const values = form.watch();
   const selectedServices = values.services ?? [];
   const archiveRequired = selectedServices.includes("catchup_tv") || selectedServices.includes("time_shift");
+  const hotelSmartTvFlow = values.project_type === "hotel" && (values.viewer_devices ?? []).includes("smart_tv");
+  const mobileSelected = (values.viewer_devices ?? []).includes("mobile");
   const currentStep = steps[step];
   const progressPercent = ((step + 1) / steps.length) * 100;
   const canGoBack = step > 0 && !loading;
@@ -462,6 +478,43 @@ export function Wizard({
                   label="Adaptive bitrate required"
                   showError={shouldShowError(form, "adaptive_bitrate_required", attemptedSteps.includes(3))}
                 />
+                {hotelSmartTvFlow ? (
+                  <>
+                    <FieldInput form={form} name="hotel_tv_brand" label="Hotel TV brand" showError={shouldShowError(form, "hotel_tv_brand", attemptedSteps.includes(3))} />
+                    <FieldInput form={form} name="hotel_tv_model" label="Hotel TV model or series" showError={shouldShowError(form, "hotel_tv_model", attemptedSteps.includes(3))} />
+                    <FieldSelect
+                      form={form}
+                      name="in_property_network_type"
+                      label="In-property TV delivery network"
+                      options={[...inPropertyNetworkOptions]}
+                      showError={shouldShowError(form, "in_property_network_type", attemptedSteps.includes(3))}
+                    />
+                    <FieldCheckbox
+                      form={form}
+                      name="hotel_tv_hospitality_grade"
+                      label="Hospitality/commercial TVs confirmed"
+                      showError={shouldShowError(form, "hotel_tv_hospitality_grade", attemptedSteps.includes(3))}
+                    />
+                    <FieldInput form={form} name="hotel_tv_os" label="TV operating system" showError={shouldShowError(form, "hotel_tv_os", attemptedSteps.includes(3))} />
+                    {String(values.hotel_tv_brand ?? "").trim().toLowerCase() === "lg" ? (
+                      <FieldCheckbox
+                        form={form}
+                        name="lg_procentric_direct_confirmed"
+                        label="LG Pro:Centric Direct confirmed"
+                        showError={shouldShowError(form, "lg_procentric_direct_confirmed", attemptedSteps.includes(3))}
+                      />
+                    ) : null}
+                  </>
+                ) : null}
+                {mobileSelected ? (
+                  <FieldSelect
+                    form={form}
+                    name="mobile_viewing_scope"
+                    label="Mobile viewing scope"
+                    options={[...mobileViewingScopeOptions]}
+                    showError={shouldShowError(form, "mobile_viewing_scope", attemptedSteps.includes(3))}
+                  />
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -491,6 +544,32 @@ export function Wizard({
                 showError={shouldShowError(form, "existing_network_bandwidth_mbps", attemptedSteps.includes(4))}
               />
               <FieldCheckbox form={form} name="redundancy_required" label="Redundancy required" showError={shouldShowError(form, "redundancy_required", attemptedSteps.includes(4))} />
+              {archiveRequired ? (
+                <FieldInput
+                  form={form}
+                  name="channels_to_record"
+                  label="Channels to record for Catch-up"
+                  type="number"
+                  helperText="Leave blank if all channels should be evaluated, but note that storage will stay unresolved until recording scope is confirmed."
+                  showError={shouldShowError(form, "channels_to_record", attemptedSteps.includes(4))}
+                />
+              ) : null}
+              {values.delivery_mode === "internet_ott" || values.delivery_mode === "both" ? (
+                <FieldCheckbox
+                  form={form}
+                  name="content_protection_required"
+                  label="Content protection required"
+                  showError={shouldShowError(form, "content_protection_required", attemptedSteps.includes(4))}
+                />
+              ) : null}
+              {values.project_type === "hotel" ? (
+                <FieldCheckbox
+                  form={form}
+                  name="pms_integration_required"
+                  label="PMS integration required"
+                  showError={shouldShowError(form, "pms_integration_required", attemptedSteps.includes(4))}
+                />
+              ) : null}
               <FieldInput form={form} name="target_launch_date" label="Target launch date" showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))} />
               <FieldInput form={form} name="budget_range" label="Budget range" showError={shouldShowError(form, "budget_range", attemptedSteps.includes(4))} />
               <FieldTextArea form={form} name="existing_equipment" label="Existing equipment" showError={shouldShowError(form, "existing_equipment", attemptedSteps.includes(4))} />

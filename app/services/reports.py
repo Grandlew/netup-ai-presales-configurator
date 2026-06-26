@@ -42,6 +42,12 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
         ("Viewer devices", ", ".join(format_enum_label(item.value) for item in requirements.viewer_devices)),
         ("Delivery mode", format_enum_label(requirements.delivery_mode.value)),
     ]
+    if requirements.hotel_tv_brand:
+        selected_requirements.append(("Hotel TV brand", requirements.hotel_tv_brand))
+    if requirements.hotel_tv_model:
+        selected_requirements.append(("Hotel TV model", requirements.hotel_tv_model))
+    if requirements.mobile_viewing_scope:
+        selected_requirements.append(("Mobile scope", format_enum_label(requirements.mobile_viewing_scope.value)))
     summary_rows = "".join(
         f"<div class='summary-card'><dt>{html_escape(label)}</dt><dd>{html_escape(value)}</dd></div>"
         for label, value in selected_requirements
@@ -64,6 +70,20 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
     missing_items = recommendation.missing_information or ["No major gaps detected in the submitted project profile."]
     missing = "".join(f"<li>{html_escape(item)}</li>" for item in missing_items)
     warnings = "".join(f"<li>{html_escape(item)}</li>" for item in recommendation.warnings)
+    claims = "".join(
+        f"<li><strong>{html_escape(format_enum_label(statement.status.value))}:</strong> {html_escape(statement.claim)}"
+        + (f"<br /><span style='color:#4c5e77'>{html_escape(statement.notes)}</span>" if statement.notes else "")
+        + "</li>"
+        for statement in recommendation.claim_statements
+    )
+    references = "".join(
+        f"<li><strong>{html_escape(reference.title)}</strong><br />{html_escape(reference.extracted_capability)}<br />{html_escape(reference.url)}</li>"
+        for reference in recommendation.official_references
+    )
+    alternative_architectures = "".join(
+        f"<li><strong>{html_escape(option.name)}</strong>: {html_escape(option.reason)}</li>"
+        for option in recommendation.alternative_architectures
+    )
     next_steps = "".join(
         f"<li>{html_escape(step)}</li>"
         for step in [
@@ -188,10 +208,9 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
         </div>
         <div class="capacity-card">
           <h4>Estimated archive storage</h4>
-          <p class="capacity-value">{'Not required' if recommendation.capacity.safety_adjusted_archive_storage_tb == 0 else f"{format_number(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB"}</p>
+          <p class="capacity-value">{'Pending input' if recommendation.capacity.storage_status.value == 'unknown' else 'Not required' if recommendation.capacity.safety_adjusted_archive_storage_tb == 0 else f"{format_number(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB"}</p>
           <div class="capacity-sub">
-            <strong>Base estimate</strong><br />{format_number(recommendation.capacity.estimated_archive_storage_tb)} TB<br /><br />
-            <strong>Safety-adjusted</strong><br />{format_number(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB
+            {html_escape(recommendation.capacity.storage_status_message or '') if recommendation.capacity.storage_status.value == 'unknown' else f"<strong>Base estimate</strong><br />{format_number(recommendation.capacity.estimated_archive_storage_tb)} TB<br /><br /><strong>Safety-adjusted</strong><br />{format_number(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB"}
           </div>
         </div>
       </div>
@@ -213,7 +232,7 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
         <ul class="simple-list">{assumptions}</ul>
       </div>
       <div>
-        <h2 style="font-size: 22px;">Missing information</h2>
+        <h2 style="font-size: 22px;">Missing decision-critical information</h2>
         <ul class="simple-list">{missing}</ul>
       </div>
     </section>
@@ -224,11 +243,24 @@ def render_report_html(lead_id: str, requirements: CustomerRequirements, recomme
     </section>
 
     <section class="section">
+      <h2 style="font-size: 22px;">Claim status</h2>
+      <ul class="simple-list">{claims}</ul>
+    </section>
+
+    {f'<section class="section"><h2 style="font-size: 22px;">Alternative architecture</h2><ul class="simple-list">{alternative_architectures}</ul></section>' if alternative_architectures else ''}
+
+    <section class="section">
+      <h2 style="font-size: 22px;">Official NetUP references</h2>
+      <ul class="simple-list">{references}</ul>
+    </section>
+
+    <section class="section">
       <h2 style="font-size: 22px;">Next steps</h2>
       <ol class="next-steps">{next_steps}</ol>
       <div class="review-box">
         <strong>Engineering review</strong><br />
         Submit the validated project profile to NetUP engineering to confirm the final architecture, licensing scope, redundancy approach, compatibility, and quotation.
+        <br /><br /><strong>Highest-priority follow-up question</strong><br />{html_escape(recommendation.next_question or 'NetUP engineering review is required to confirm the next unresolved item.')}
       </div>
     </section>
 

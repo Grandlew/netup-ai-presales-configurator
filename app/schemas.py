@@ -57,6 +57,29 @@ class OutputType(str, Enum):
     QAM = "dvb_c_qam"
 
 
+class MobileViewingScope(str, Enum):
+    HOTEL_WIFI_ONLY = "hotel_wifi_only"
+    OFF_PROPERTY = "off_property_access"
+    BOTH = "both"
+    STAFF_ONLY = "staff_internal_only"
+
+
+class InPropertyNetworkType(str, Enum):
+    ETHERNET = "ethernet"
+    WIFI = "wifi"
+    COAX = "coaxial"
+    HYBRID = "hybrid"
+
+
+class ClaimStatus(str, Enum):
+    CONFIRMED = "confirmed"
+    CALCULATED = "calculated"
+    INFERRED = "inferred"
+    CONDITIONAL = "conditional"
+    UNKNOWN = "unknown"
+    PROVISIONAL = "provisional"
+
+
 class CustomerRequirements(BaseModel):
     project_type: ProjectType
     country: str | None = None
@@ -85,6 +108,16 @@ class CustomerRequirements(BaseModel):
     existing_equipment: str | None = Field(default=None, max_length=2000)
     budget_range: str | None = None
     target_launch_date: str | None = None
+    hotel_tv_brand: str | None = None
+    hotel_tv_model: str | None = None
+    hotel_tv_hospitality_grade: bool | None = None
+    hotel_tv_os: str | None = None
+    lg_procentric_direct_confirmed: bool | None = None
+    mobile_viewing_scope: MobileViewingScope | None = None
+    in_property_network_type: InPropertyNetworkType | None = None
+    pms_integration_required: bool | None = None
+    channels_to_record: int | None = Field(default=None, ge=0, le=20_000)
+    content_protection_required: bool | None = None
 
     contact_name: str | None = None
     company: str | None = None
@@ -129,6 +162,16 @@ class PartialCustomerRequirements(BaseModel):
     existing_equipment: str | None = None
     budget_range: str | None = None
     target_launch_date: str | None = None
+    hotel_tv_brand: str | None = None
+    hotel_tv_model: str | None = None
+    hotel_tv_hospitality_grade: bool | None = None
+    hotel_tv_os: str | None = None
+    lg_procentric_direct_confirmed: bool | None = None
+    mobile_viewing_scope: MobileViewingScope | None = None
+    in_property_network_type: InPropertyNetworkType | None = None
+    pms_integration_required: bool | None = None
+    channels_to_record: int | None = Field(default=None, ge=0, le=20_000)
+    content_protection_required: bool | None = None
     contact_name: str | None = None
     company: str | None = None
     email: str | None = None
@@ -163,6 +206,16 @@ class AIExtractedRequirements(BaseModel):
     existing_equipment: str | None = None
     budget_range: str | None = None
     target_launch_date: str | None = None
+    hotel_tv_brand: str | None = None
+    hotel_tv_model: str | None = None
+    hotel_tv_hospitality_grade: bool | None = None
+    hotel_tv_os: str | None = None
+    lg_procentric_direct_confirmed: bool | None = None
+    mobile_viewing_scope: MobileViewingScope | None = None
+    in_property_network_type: InPropertyNetworkType | None = None
+    pms_integration_required: bool | None = None
+    channels_to_record: int | None = Field(default=None, ge=0, le=20_000)
+    content_protection_required: bool | None = None
     contact_name: str | None = None
     company: str | None = None
     email: str | None = None
@@ -176,10 +229,17 @@ class AIExtractionPayload(BaseModel):
 
 
 class ProductRecommendation(BaseModel):
+    canonical_product_id: str
     product: str
     category: str
+    object_type: str
+    role_summary: str
     reason: str
     rule_id: str
+    claim_status: ClaimStatus = ClaimStatus.PROVISIONAL
+    provided_capabilities: list[str] = Field(default_factory=list)
+    conditions: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
     validation_status: str = "Requires NetUP validation"
     warning: str | None = None
 
@@ -199,9 +259,79 @@ class CapacityEstimate(BaseModel):
     unicast_bandwidth_formula: str
     base_bandwidth_mbps: float
     safety_adjusted_bandwidth_mbps: float
+    source_ingest_bandwidth_mbps: float | None = None
+    core_network_multicast_bandwidth_mbps: float | None = None
+    local_unicast_access_bandwidth_mbps: float | None = None
+    ott_origin_egress_bandwidth_mbps: float | None = None
+    per_viewer_bandwidth_mbps: float
+    storage_ingest_bandwidth_mbps: float | None = None
     estimated_archive_storage_tb: float
     safety_adjusted_archive_storage_tb: float
+    storage_status: ClaimStatus = ClaimStatus.CALCULATED
+    storage_status_message: str | None = None
+    archive_scope_summary: str | None = None
     assumptions: list[str]
+
+
+class ReadinessState(BaseModel):
+    intake_complete: bool
+    preliminary_recommendation_ready: bool
+    capacity_estimate_ready: bool
+    compatibility_review_ready: bool
+    engineering_review_required: bool
+    quotation_ready: bool
+
+
+class MissingInformationItem(BaseModel):
+    code: str
+    label: str
+    category: str
+    status: ClaimStatus
+    reason: str
+    question: str
+
+
+class EvidenceReference(BaseModel):
+    id: str
+    title: str
+    url: str
+    publication_date: str | None = None
+    extracted_capability: str
+    confidence: ClaimStatus
+    reviewed_status: str
+
+
+class ClaimStatement(BaseModel):
+    claim: str
+    status: ClaimStatus
+    conditions: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    notes: str | None = None
+
+
+class ArchitectureNode(BaseModel):
+    id: str
+    label: str
+    kind: str
+    status: ClaimStatus
+    details: list[str] = Field(default_factory=list)
+
+
+class ArchitectureBranch(BaseModel):
+    name: str
+    status: ClaimStatus
+    nodes: list[ArchitectureNode]
+    note: str | None = None
+
+
+class ArchitectureOption(BaseModel):
+    name: str
+    status: ClaimStatus
+    preference: str
+    reason: str
+    tradeoffs: list[str] = Field(default_factory=list)
+    information_required: list[str] = Field(default_factory=list)
+    branches: list[ArchitectureBranch] = Field(default_factory=list)
 
 
 class RecommendationResponse(BaseModel):
@@ -210,7 +340,15 @@ class RecommendationResponse(BaseModel):
     capacity: CapacityEstimate
     warnings: list[str]
     missing_information: list[str]
+    missing_information_items: list[MissingInformationItem] = Field(default_factory=list)
     assumptions: list[str]
+    readiness: ReadinessState
+    claim_statements: list[ClaimStatement] = Field(default_factory=list)
+    official_references: list[EvidenceReference] = Field(default_factory=list)
+    recommended_architecture: ArchitectureOption | None = None
+    alternative_architectures: list[ArchitectureOption] = Field(default_factory=list)
+    next_question: str | None = None
+    audit_trace: dict[str, Any] = Field(default_factory=dict)
     requires_engineer_review: bool = True
     rule_version: str
 

@@ -84,7 +84,7 @@ def test_extracts_expected_requirements_from_example_message():
         assert "catchup_tv" in result.extracted_requirements.services
         assert "smart_tv" in result.extracted_requirements.viewer_devices
         assert "mobile" in result.extracted_requirements.viewer_devices
-        assert result.next_question == "Will delivery stay on a local network, go over OTT/internet, or both?"
+        assert result.next_question == "What TV model or series will be installed in the hotel rooms?"
         assert "project type" not in (result.next_question or "").lower()
         assert fake_client.responses.calls[0]["model"] == "gpt-5.4-mini"
 

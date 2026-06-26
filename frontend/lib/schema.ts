@@ -24,6 +24,16 @@ export const wizardSchema = z.object({
   existing_equipment: z.string().optional(),
   target_launch_date: z.string().optional(),
   budget_range: z.string().optional(),
+  hotel_tv_brand: z.string().optional(),
+  hotel_tv_model: z.string().optional(),
+  hotel_tv_hospitality_grade: z.boolean().optional(),
+  hotel_tv_os: z.string().optional(),
+  lg_procentric_direct_confirmed: z.boolean().optional(),
+  mobile_viewing_scope: z.string().optional(),
+  in_property_network_type: z.string().optional(),
+  pms_integration_required: z.boolean().optional(),
+  channels_to_record: z.coerce.number().int().min(0).optional(),
+  content_protection_required: z.boolean().optional(),
   contact_name: z.string().min(1, "Enter the contact name."),
   email: z.string().email("Enter a valid work email"),
   company: z.string().optional(),
@@ -32,16 +42,6 @@ export const wizardSchema = z.object({
   consent_given: z.literal<boolean>(true, {
     errorMap: () => ({ message: "Consent is required before submitting the request." }),
   }),
-}).superRefine((value, context) => {
-  if (value.services.includes("catchup_tv") || value.services.includes("time_shift")) {
-    if (!value.archive_days || value.archive_days <= 0) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["archive_days"],
-        message: "Enter the number of archive days.",
-      });
-    }
-  }
 });
 
 export type WizardFormValues = z.infer<typeof wizardSchema>;

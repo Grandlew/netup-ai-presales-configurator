@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.schemas import PartialCustomerRequirements
+from app.schemas import PartialCustomerRequirements, ProjectType, Service, ViewerDevice
 
 
 REQUIRED_FIELDS = [
@@ -24,6 +24,20 @@ def missing_required_fields(req: PartialCustomerRequirements) -> list[str]:
 
 
 def next_question_for(req: PartialCustomerRequirements) -> str | None:
+    if req.project_type == ProjectType.HOTEL:
+        if ViewerDevice.SMART_TV in req.viewer_devices and not req.hotel_tv_model:
+            return "What TV model or series will be installed in the hotel rooms?"
+        if ViewerDevice.SMART_TV in req.viewer_devices and req.hotel_tv_hospitality_grade is None:
+            return "Are the room TVs hospitality/commercial models or standard retail TVs?"
+        if req.mobile_viewing_scope is None and ViewerDevice.MOBILE in req.viewer_devices:
+            return "Should mobile viewing work only on hotel Wi-Fi, outside the property as well, or both?"
+        if Service.CATCHUP in req.services and not req.archive_days:
+            return "How many days of Catch-up TV should be retained, and should all channels be recorded?"
+        if req.in_property_network_type is None and ViewerDevice.SMART_TV in req.viewer_devices:
+            return "Will TV channels reach the rooms over Ethernet, Wi-Fi, coaxial cable, or a hybrid network?"
+        if req.pms_integration_required is None:
+            return "Does the hotel require PMS integration for welcome screens, billing, or guest messaging?"
+
     prompts = [
         ("project_type", "What type of project is this: hotel, hospital, university, operator, transport, or another environment?"),
         ("subscribers_or_rooms", "How many subscribers, rooms, screens, or endpoints do you plan to serve?"),
@@ -38,4 +52,3 @@ def next_question_for(req: PartialCustomerRequirements) -> str | None:
         if value is None or value == []:
             return prompt
     return None
-

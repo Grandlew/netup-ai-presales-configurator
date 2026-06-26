@@ -7,6 +7,7 @@ import {
   buildProjectTitle,
   buildReferenceNumber,
   formatGeneratedDate,
+  formatEnumLabel,
   formatNumber,
   formatRuleVersion,
   formatValue,
@@ -100,6 +101,9 @@ function ProductCard({
         <div className="flex flex-wrap gap-2 lg:justify-end">
           <span className="inline-flex items-center rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink">Preliminary recommendation</span>
           <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue">
+            {formatEnumLabel(item.claim_status)}
+          </span>
+          <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue">
             {item.validation_status ?? "Requires NetUP validation"}
           </span>
         </div>
@@ -191,6 +195,10 @@ export function ResultsPanel({
     () => parseBandwidthFormula(recommendation.capacity.unicast_bandwidth_formula, recommendation.capacity.safety_adjusted_bandwidth_mbps),
     [recommendation.capacity.safety_adjusted_bandwidth_mbps, recommendation.capacity.unicast_bandwidth_formula],
   );
+  const detailedMissingInformation = recommendation.missing_information_items ?? [];
+  const claimStatements = recommendation.claim_statements ?? [];
+  const officialReferences = recommendation.official_references ?? [];
+  const alternativeArchitectures = recommendation.alternative_architectures ?? [];
   const missingInformation = recommendation.missing_information.length ? recommendation.missing_information : ["No major gaps detected in the submitted project profile."];
 
   return (
@@ -246,7 +254,7 @@ export function ResultsPanel({
       <section className="panel p-5 md:p-6">
         <div className="flex flex-col gap-3">
           <h3 className="text-xl font-semibold text-ink">Recommended product families</h3>
-          <p className="text-sm text-slate-600">Each card stays concise by default and expands into deterministic matched conditions when needed.</p>
+          <p className="text-sm text-slate-600">Each product is tagged with a confidence status so inferred or conditional conclusions are not presented as confirmed facts.</p>
         </div>
         <div className="mt-5 grid gap-4">
           {recommendation.recommendations.map((item, index) => (
@@ -269,7 +277,7 @@ export function ResultsPanel({
           </div>
 
           <div className="rounded-3xl bg-paper p-5" data-testid="capacity-card">
-            <p className="text-sm font-medium text-slate-500">Estimated bandwidth</p>
+            <p className="text-sm font-medium text-slate-500">Estimated OTT viewer egress</p>
             <p className="mt-3 whitespace-nowrap text-3xl font-semibold text-ink">{formatNumber(recommendation.capacity.safety_adjusted_bandwidth_mbps)} Mbps</p>
             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
               <p className="font-medium text-ink">Base estimate</p>
@@ -282,13 +290,23 @@ export function ResultsPanel({
           <div className="rounded-3xl bg-paper p-5" data-testid="capacity-card">
             <p className="text-sm font-medium text-slate-500">Estimated archive storage</p>
             <p className="mt-3 whitespace-nowrap text-3xl font-semibold text-ink">
-              {archiveRequired ? `${formatNumber(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB` : "Not required"}
+              {recommendation.capacity.storage_status === "unknown"
+                ? "Pending input"
+                : archiveRequired
+                  ? `${formatNumber(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB`
+                  : "Not required"}
             </p>
             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
-              <p className="font-medium text-ink">Base estimate</p>
-              <p className="mt-1">{formatNumber(recommendation.capacity.estimated_archive_storage_tb)} TB</p>
-              <p className="mt-3 font-medium text-ink">Safety-adjusted</p>
-              <p className="mt-1">{formatNumber(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB</p>
+              {recommendation.capacity.storage_status === "unknown" ? (
+                <p className="mt-1">{recommendation.capacity.storage_status_message}</p>
+              ) : (
+                <>
+                  <p className="font-medium text-ink">Base estimate</p>
+                  <p className="mt-1">{formatNumber(recommendation.capacity.estimated_archive_storage_tb)} TB</p>
+                  <p className="mt-3 font-medium text-ink">Safety-adjusted</p>
+                  <p className="mt-1">{formatNumber(recommendation.capacity.safety_adjusted_archive_storage_tb)} TB</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -308,6 +326,16 @@ export function ResultsPanel({
             <li className="rounded-2xl bg-paper px-4 py-3">Multiple adaptive-bitrate renditions may increase origin, processing, and storage requirements.</li>
             <li className="rounded-2xl bg-paper px-4 py-3">All capacity estimates remain preliminary pending NetUP engineering validation.</li>
           </ul>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-slate-700">
+              <p className="font-medium text-ink">Source ingest bandwidth</p>
+              <p className="mt-1">{formatNumber(recommendation.capacity.source_ingest_bandwidth_mbps ?? 0)} Mbps</p>
+            </div>
+            <div className="rounded-2xl bg-paper px-4 py-3 text-sm text-slate-700">
+              <p className="font-medium text-ink">Per active viewer</p>
+              <p className="mt-1">{formatNumber(recommendation.capacity.per_viewer_bandwidth_mbps)} Mbps</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -326,8 +354,8 @@ export function ResultsPanel({
         <div className="panel p-5 md:p-6 print:break-inside-avoid">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-xl font-semibold text-ink">Missing information</h3>
-              <p className="mt-2 text-sm text-slate-600">Only information that materially affects the recommendation is listed here.</p>
+              <h3 className="text-xl font-semibold text-ink">Missing decision-critical information</h3>
+              <p className="mt-2 text-sm text-slate-600">Only recommendation, capacity, or implementation inputs that materially affect the design are listed here.</p>
             </div>
             {recommendation.missing_information.length ? (
               <button
@@ -340,11 +368,19 @@ export function ResultsPanel({
             ) : null}
           </div>
           <ul className="mt-4 space-y-3 text-sm text-slate-700">
-            {missingInformation.map((item) => (
-              <li key={item} className="rounded-2xl bg-paper px-4 py-3">
-                {item}
-              </li>
-            ))}
+            {detailedMissingInformation.length
+              ? detailedMissingInformation.map((item) => (
+                  <li key={item.code} className="rounded-2xl bg-paper px-4 py-3">
+                    <p className="font-medium text-ink">{item.label}</p>
+                    <p className="mt-1 text-slate-600">{item.reason}</p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue">{formatEnumLabel(item.category)}</p>
+                  </li>
+                ))
+              : missingInformation.map((item) => (
+                  <li key={item} className="rounded-2xl bg-paper px-4 py-3">
+                    {item}
+                  </li>
+                ))}
           </ul>
           {recommendation.missing_information.length ? (
             <button
@@ -372,6 +408,61 @@ export function ResultsPanel({
         </ul>
       </section>
 
+      {claimStatements.length ? (
+        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+          <h3 className="text-xl font-semibold text-ink">Claim status</h3>
+          <div className="mt-4 grid gap-3">
+            {claimStatements.map((statement) => (
+              <div key={statement.claim} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex items-center rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink">{formatEnumLabel(statement.status)}</span>
+                  <p className="text-sm font-medium text-ink">{statement.claim}</p>
+                </div>
+                {statement.notes ? <p className="mt-2 text-sm text-slate-600">{statement.notes}</p> : null}
+                {statement.conditions.length ? <p className="mt-2 text-sm text-slate-600">Conditions: {statement.conditions.join(", ")}</p> : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {alternativeArchitectures.length ? (
+        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+          <h3 className="text-xl font-semibold text-ink">Alternative architecture</h3>
+          <div className="mt-4 grid gap-4">
+            {alternativeArchitectures.map((option) => (
+              <div key={option.name} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex items-center rounded-full bg-paper px-3 py-1 text-xs font-semibold text-ink">{formatEnumLabel(option.status)}</span>
+                  <p className="text-sm font-medium text-ink">{option.name}</p>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">{option.reason}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {officialReferences.length ? (
+        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+          <h3 className="text-xl font-semibold text-ink">Official NetUP references</h3>
+          <div className="mt-4 grid gap-3">
+            {officialReferences.map((reference) => (
+              <a
+                key={reference.id}
+                href={reference.url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700 transition hover:border-slate-300"
+              >
+                <p className="font-medium text-ink">{reference.title}</p>
+                <p className="mt-1">{reference.extracted_capability}</p>
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.7fr)]">
         <div className="panel p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Next steps</h3>
@@ -381,6 +472,12 @@ export function ResultsPanel({
             <li className="rounded-2xl bg-paper px-4 py-3">3. Submit the project for NetUP engineering validation.</li>
             <li className="rounded-2xl bg-paper px-4 py-3">4. Receive the final architecture, licensing scope, and quotation.</li>
           </ol>
+          {recommendation.next_question ? (
+            <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700">
+              <p className="font-medium text-ink">Highest-priority follow-up question</p>
+              <p className="mt-1">{recommendation.next_question}</p>
+            </div>
+          ) : null}
         </div>
 
         <section className="panel p-5 md:p-6 print:hidden" data-testid="actions-card">

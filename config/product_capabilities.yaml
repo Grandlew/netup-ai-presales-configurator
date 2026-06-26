@@ -1,0 +1,482 @@
+version: "2026.06-netup-audit"
+notes: "Capability registry derived from official NetUP-controlled pages and repository-supplied MVP rules. Unverified fields remain pending NetUP validation."
+products:
+  - canonical_product_id: iptv_combine_8x
+    official_product_name: NetUP IPTV Combine 8x
+    product_family: IPTV Combine
+    product_role:
+      - Hardware appliance
+      - Core IPTV platform
+      - Headend
+    deployment_segments:
+      - hotel
+      - hospitality
+      - small_network
+    supported_signal_inputs:
+      - satellite
+      - terrestrial
+      - cable
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - internet_ott
+    included_functions:
+      - dvb_reception
+      - ip_ingestion
+      - core_iptv_platform
+      - middleware
+      - billing
+      - catchup_tv
+      - time_shift
+      - video_on_demand
+      - smart_tv_delivery
+      - mobile_delivery
+      - web_delivery
+    optional_functions:
+      - commercial_services
+    compatible_client_categories:
+      - set_top_box
+      - smart_tv
+      - mobile
+      - web_browser
+    official_capacity_statements:
+      subscribers: 1000
+      channels_from_antennas_and_ip_networks: 100
+      dvb_inputs: 8
+    capacity_unit:
+      subscribers: subscribers
+      channels_from_antennas_and_ip_networks: channels
+      dvb_inputs: inputs
+    conditional_requirements:
+      - Exact DVB/transponder count still needs confirmation against the selected source plan.
+      - Smart TV delivery remains conditional on client-device compatibility.
+    incompatibilities: []
+    potential_overlap_with:
+      - dvb_ip_streamer
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_combine_page
+        title: NetUP IPTV Combine - Complete solution in one device
+        url: https://www.netup.tv/en/iptv/combine.shtml
+        extracted_capability: All-in-one IPTV platform with DVB/IP reception, middleware, billing, built-in storage, and support for local-network and Internet delivery.
+      - id: ref_combine_8x_capacity
+        title: NetUP IPTV Combine 8x section
+        url: https://www.netup.tv/en/iptv/combine.shtml#combine-8x
+        extracted_capability: Up to 1000 subscribers, more than 100 channels from antennas and IP-networks, 8 universal DVB inputs.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Official page positions the 8x model as ideal for hotels and similar hospitality environments."
+
+  - canonical_product_id: iptv_combine_16x
+    official_product_name: NetUP IPTV Combine 16x
+    product_family: IPTV Combine
+    product_role:
+      - Hardware appliance
+      - Core IPTV platform
+      - Headend
+    deployment_segments:
+      - hotel
+      - large_enterprise
+    supported_signal_inputs:
+      - satellite
+      - terrestrial
+      - cable
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - internet_ott
+    included_functions:
+      - dvb_reception
+      - ip_ingestion
+      - core_iptv_platform
+      - middleware
+      - billing
+      - catchup_tv
+      - time_shift
+      - video_on_demand
+      - smart_tv_delivery
+      - mobile_delivery
+      - web_delivery
+    optional_functions:
+      - redundancy_or_large_scale_fit
+    compatible_client_categories:
+      - set_top_box
+      - smart_tv
+      - mobile
+      - web_browser
+    official_capacity_statements:
+      subscribers: 1000
+      channels_from_antennas_and_ip_networks: 200
+      dvb_inputs: 16
+    capacity_unit:
+      subscribers: subscribers
+      channels_from_antennas_and_ip_networks: channels
+      dvb_inputs: inputs
+    conditional_requirements:
+      - Redundant deployment still requires engineering validation.
+    incompatibilities: []
+    potential_overlap_with:
+      - dvb_ip_streamer
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_combine_page
+        title: NetUP IPTV Combine - Complete solution in one device
+        url: https://www.netup.tv/en/iptv/combine.shtml
+        extracted_capability: All-in-one IPTV platform with DVB/IP reception and service stack.
+      - id: ref_combine_16x_capacity
+        title: NetUP IPTV Combine 16x section
+        url: https://www.netup.tv/en/iptv/combine.shtml#combine-16x
+        extracted_capability: Up to 1000 subscribers, more than 200 channels from antennas and IP-networks, 16 universal DVB inputs.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Official page describes the 16x model as a high-performance and redundant solution for large companies."
+
+  - canonical_product_id: dvb_ip_streamer
+    official_product_name: NetUP DVB IP Streamer
+    product_family: Streamer
+    product_role:
+      - Hardware appliance
+      - Headend
+    deployment_segments:
+      - ip_network
+    supported_signal_inputs:
+      - satellite
+      - terrestrial
+      - cable
+    supported_outputs:
+      - ip_streams
+      - local_network
+      - internet_ott
+    included_functions:
+      - dvb_reception
+      - dvb_to_ip
+      - stream_output_http
+      - stream_output_hls
+      - stream_output_dash
+    optional_functions: []
+    compatible_client_categories: []
+    official_capacity_statements:
+      dvb_inputs: 64
+    capacity_unit:
+      dvb_inputs: inputs
+    conditional_requirements:
+      - Separate modular headend architecture may still be preferable for expansion or operational separation.
+    incompatibilities: []
+    potential_overlap_with:
+      - iptv_combine_8x
+      - iptv_combine_16x
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_headend_streamer
+        title: NetUP digital headends - NetUP DVB IP Streamer
+        url: https://www.netup.tv/en/headends
+        extracted_capability: Receives satellite or terrestrial signals and streams live TV over UDP, HTTP, RTMP, HLS, and DASH with up to 64 DVB inputs.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Use when modular headend capacity or separation is required beyond an all-in-one Combine deployment."
+
+  - canonical_product_id: stream_processor
+    official_product_name: NetUP Stream Processor
+    product_family: Stream Processor
+    product_role:
+      - Hardware appliance
+      - Media processing
+    deployment_segments:
+      - ip_network
+      - ott
+    supported_signal_inputs:
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - internet_ott
+      - udp
+      - http
+      - rtmp
+      - hls
+      - srt
+      - dash
+    included_functions:
+      - transcoding
+      - stream_repackaging
+      - graphics_overlay
+      - mosaic
+    optional_functions:
+      - adaptive_output_formats
+    compatible_client_categories:
+      - mobile
+      - web_browser
+      - smart_tv
+    official_capacity_statements:
+      sd_channels: 60
+    capacity_unit:
+      sd_channels: channels
+    conditional_requirements:
+      - Official page confirms transcoding and protocol output, but OTT authentication, DRM, and licensing scope still require NetUP confirmation.
+    incompatibilities: []
+    potential_overlap_with: []
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_headend_processor
+        title: NetUP digital headends - NetUP Stream Processor
+        url: https://www.netup.tv/en/headends
+        extracted_capability: MPEG-2/AVC/HEVC transcoder with mosaic, graphics overlay, and UDP/HTTP/RTMP/HLS/SRT/DASH outputs.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Treat as confirmed for media processing and protocol output; full OTT service-stack claims stay conditional."
+
+  - canonical_product_id: combine_hotel
+    official_product_name: NetUP Combine Hotel
+    product_family: NetUP.tv Hotel
+    product_role:
+      - Hardware appliance
+      - Hospitality platform
+      - Headend
+    deployment_segments:
+      - hotel
+      - hospitality
+    supported_signal_inputs:
+      - satellite
+      - terrestrial
+      - cable
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - hybrid
+    included_functions:
+      - hospitality_iptv_hub
+      - dvb_reception
+      - guest_tv_portal
+      - pms_integration
+      - room_billing
+      - welcome_screen
+    optional_functions:
+      - mobile_guest_access
+      - hybrid_coax_wifi_delivery
+    compatible_client_categories:
+      - hospitality_tv
+      - smart_tv
+      - set_top_box
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - Exact capacity and model-specific limits remain pending NetUP validation.
+      - Client compatibility still depends on selected TV models and hotel features.
+    incompatibilities: []
+    potential_overlap_with:
+      - iptv_combine_8x
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_hospitality_main
+        title: NetUP.tv Hotel - Hospitality IPTV solutions
+        url: https://www.netup.tv/en/iptv/hospitality.shtml
+        extracted_capability: Hospitality-focused central hub with TV channel reception, monetization, PMS-connected workflows, and hotel-device compatibility options.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Hospitality-focused option that should be evaluated before defaulting to generic IPTV Combine for hotel projects."
+
+  - canonical_product_id: netup_tv_hotel_software
+    official_product_name: NetUP.tv Hotel Software
+    product_family: NetUP.tv Hotel
+    product_role:
+      - Software platform
+      - Hospitality platform
+    deployment_segments:
+      - hotel
+      - hospitality
+    supported_signal_inputs:
+      - existing_headend
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - hybrid
+    included_functions:
+      - guest_tv_portal
+      - pms_integration
+      - room_billing
+      - welcome_screen
+      - hotel_service_catalog
+    optional_functions:
+      - mobile_guest_access
+    compatible_client_categories:
+      - hospitality_tv
+      - smart_tv
+      - set_top_box
+      - mobile
+      - web_browser
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - Requires an existing content source plus server or virtualization according to the official FAQ.
+    incompatibilities: []
+    potential_overlap_with:
+      - combine_hotel
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_hospitality_software
+        title: NetUP.tv Hotel - software-only FAQ
+        url: https://www.netup.tv/en/iptv/hospitality.shtml
+        extracted_capability: Hotel TV software can be purchased without hardware when content source and server/virtualization already exist.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Useful when the customer already has a headend and needs the hotel software/client layer."
+
+  - canonical_product_id: netup_smarttv
+    official_product_name: NetUP SmartTV
+    product_family: NetUP SmartTV
+    product_role:
+      - Client application
+    deployment_segments:
+      - operator
+      - hotel
+      - hospitality
+    supported_signal_inputs: []
+    supported_outputs: []
+    included_functions:
+      - smart_tv_client
+    optional_functions:
+      - stb_free_viewing
+    compatible_client_categories:
+      - smart_tv
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - Support is stated at platform/brand level, not for every TV model.
+      - For LG, hotel-application workflows depend on compatible business-series devices and Pro:Centric Direct where applicable.
+    incompatibilities: []
+    potential_overlap_with: []
+    lifecycle_status: current_official_page
+    evidence_sources:
+      - id: ref_smarttv_clients
+        title: NetUP SmartTV - IPTV application for smart TVs
+        url: https://www.netup.tv/en/clients/smarttv.shtml
+        extracted_capability: Smart TV applications for Samsung Tizen, LG WebOS, and Android TV platforms.
+      - id: ref_hotel_tv_compatibility
+        title: Interactive hotel TV - Hospitality TV compatibility
+        url: https://www.netup.tv/en/clients/hoteltv.shtml
+        extracted_capability: Philips MediaSuite/HeartLine, Samsung hotel lineups with H.Browser/LYNK Reach, and LG business series with Pro:Centric Direct are described as supported hospitality-TV paths.
+    evidence_date: null
+    evidence_strength: confirmed
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Model-specific compatibility remains conditional until the exact TV series and hotel features are confirmed."
+
+  - canonical_product_id: iptv_ott_complex
+    official_product_name: NetUP IPTV/OTT Complex
+    product_family: IPTV/OTT Complex
+    product_role:
+      - Software platform
+      - Core IPTV platform
+    deployment_segments:
+      - operator
+    supported_signal_inputs:
+      - ip_streams
+    supported_outputs:
+      - local_network
+      - internet_ott
+    included_functions:
+      - core_iptv_platform
+      - middleware
+      - billing
+    optional_functions: []
+    compatible_client_categories:
+      - set_top_box
+      - web_browser
+      - mobile
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - Current operator-scale trigger remains provisional until NetUP confirms sizing and topology boundaries.
+    incompatibilities: []
+    potential_overlap_with: []
+    lifecycle_status: repository_rule_only
+    evidence_sources:
+      - id: ref_rule_core_complex
+        title: Repository product rules - core-complex
+        url: config/product_rules.yaml
+        extracted_capability: Large operator projects currently map to NetUP IPTV/OTT Complex in the MVP rule set.
+    evidence_date: null
+    evidence_strength: provisional
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Included as a provisional rule-backed entry until direct official product evidence is curated."
+
+  - canonical_product_id: middleware_billing
+    official_product_name: NetUP Middleware and Billing
+    product_family: Middleware and Billing
+    product_role:
+      - Software platform
+      - Commercial licence
+    deployment_segments:
+      - operator
+    supported_signal_inputs: []
+    supported_outputs: []
+    included_functions:
+      - billing
+      - middleware
+    optional_functions: []
+    compatible_client_categories: []
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - Current use in the MVP is rule-backed and still pending direct NetUP validation for this configurator.
+    incompatibilities: []
+    potential_overlap_with: []
+    lifecycle_status: repository_rule_only
+    evidence_sources:
+      - id: ref_rule_billing
+        title: Repository product rules - billing triggers
+        url: config/product_rules.yaml
+        extracted_capability: Billing and operator projects currently trigger NetUP Middleware and Billing in the MVP rule set.
+    evidence_date: null
+    evidence_strength: provisional
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Rule-backed placeholder until additional official evidence is catalogued."
+
+  - canonical_product_id: vod_capability
+    official_product_name: NetUP VoD capability
+    product_family: VoD capability
+    product_role:
+      - Software module
+    deployment_segments:
+      - hotel
+      - operator
+    supported_signal_inputs: []
+    supported_outputs: []
+    included_functions:
+      - video_on_demand
+    optional_functions: []
+    compatible_client_categories:
+      - set_top_box
+      - smart_tv
+      - mobile
+      - web_browser
+    official_capacity_statements: {}
+    capacity_unit: {}
+    conditional_requirements:
+      - This remains a rule-backed service-module placeholder rather than a hardware recommendation.
+    incompatibilities: []
+    potential_overlap_with: []
+    lifecycle_status: repository_rule_only
+    evidence_sources:
+      - id: ref_rule_vod
+        title: Repository product rules - vod trigger
+        url: config/product_rules.yaml
+        extracted_capability: Video-on-demand currently maps to a NetUP VoD capability placeholder in the MVP rule set.
+    evidence_date: null
+    evidence_strength: provisional
+    validation_status: pending_netup_validation
+    last_reviewed_at: "2026-06-26"
+    notes: "Customer-facing wording should keep this distinct from hardware products."

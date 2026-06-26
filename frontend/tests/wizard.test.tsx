@@ -67,10 +67,17 @@ const recommendationResponse = {
   project_summary: "180-room hotel IPTV deployment",
   recommendations: [
     {
+      canonical_product_id: "iptv_combine_8x",
       product: "NetUP IPTV Combine 8x",
       category: "Core",
+      object_type: "Hardware appliance",
+      role_summary: "Core hotel TV and IPTV platform",
       reason: "Fits project scope.",
       rule_id: "hotel-core-01",
+      claim_status: "provisional",
+      provided_capabilities: ["dvb_reception", "ip_ingestion", "core_iptv_platform"],
+      conditions: ["Final compatibility requires engineering review."],
+      evidence_ids: ["ref_combine_page"],
       validation_status: "Requires NetUP validation",
       warning: "Validate firmware compatibility for final deployment.",
     },
@@ -81,13 +88,73 @@ const recommendationResponse = {
     unicast_bandwidth_formula: "100 viewers x 6 Mbps x safety factor",
     base_bandwidth_mbps: 600,
     safety_adjusted_bandwidth_mbps: 806.4,
+    source_ingest_bandwidth_mbps: 510,
+    core_network_multicast_bandwidth_mbps: null,
+    local_unicast_access_bandwidth_mbps: null,
+    ott_origin_egress_bandwidth_mbps: 806.4,
+    per_viewer_bandwidth_mbps: 6,
+    storage_ingest_bandwidth_mbps: null,
     estimated_archive_storage_tb: 38.56,
     safety_adjusted_archive_storage_tb: 48.81,
+    storage_status: "calculated",
+    storage_status_message: null,
+    archive_scope_summary: "85 channels recorded for 7 days.",
     assumptions: ["Assumes standard HD channel mix."],
   },
   warnings: ["Confirm final Smart TV firmware compatibility during engineering review."],
   missing_information: [],
+  missing_information_items: [],
   assumptions: ["Archive retention will be confirmed with the customer."],
+  readiness: {
+    intake_complete: true,
+    preliminary_recommendation_ready: true,
+    capacity_estimate_ready: true,
+    compatibility_review_ready: false,
+    engineering_review_required: true,
+    quotation_ready: false,
+  },
+  claim_statements: [
+    {
+      claim: "Native Smart TV delivery may avoid external set-top boxes.",
+      status: "conditional",
+      conditions: ["Supported TV platform"],
+      evidence_ids: ["ref_smarttv_clients"],
+      notes: "Compatibility depends on the selected TV platform.",
+    },
+  ],
+  official_references: [
+    {
+      id: "ref_smarttv_clients",
+      title: "NetUP SmartTV - IPTV application for smart TVs",
+      url: "https://www.netup.tv/en/clients/smarttv.shtml",
+      extracted_capability: "Smart TV applications for Samsung Tizen, LG WebOS, and Android TV platforms.",
+      confidence: "confirmed",
+      reviewed_status: "pending_netup_validation",
+    },
+  ],
+  recommended_architecture: {
+    name: "Preliminary recommended architecture",
+    status: "conditional",
+    preference: "recommended",
+    reason: "Selected to cover the current requirements.",
+    tradeoffs: [],
+    information_required: [],
+    branches: [
+      {
+        name: "In-room TV delivery",
+        status: "conditional",
+        note: "Managed hotel network path.",
+        nodes: [
+          { id: "sources", label: "Existing IP streams", kind: "customer-owned source", status: "confirmed", details: [] },
+          { id: "core", label: "NetUP IPTV Combine 8x", kind: "NetUP hardware", status: "inferred", details: [] },
+          { id: "devices", label: "Smart TV, Set-top box", kind: "client application/device", status: "conditional", details: [] },
+        ],
+      },
+    ],
+  },
+  alternative_architectures: [],
+  next_question: "What TV model or series will be installed in the hotel rooms?",
+  audit_trace: {},
   rule_version: "2026.06-mvp",
   requires_engineer_review: true,
 };
@@ -332,7 +399,7 @@ describe("Wizard", () => {
 
     expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Missing information" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Missing decision-critical information" })).toBeInTheDocument();
     expect(screen.getAllByText("NetUP IPTV Combine 8x").length).toBeGreaterThan(0);
     expect(screen.getAllByText("806.4 Mbps").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
@@ -587,8 +654,8 @@ describe("ResultsPanel", () => {
     expect(screen.getAllByText("Hotel").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Delivery mode").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Local network").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Matched rule reference").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("hotel-core-01").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Matched rule reference")).not.toBeInTheDocument();
+    expect(screen.queryByText("hotel-core-01")).not.toBeInTheDocument();
   });
 
   it("renders the deterministic architecture diagram without unknown placeholder nodes", () => {

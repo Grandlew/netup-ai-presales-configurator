@@ -42,6 +42,8 @@ class Settings:
             os.getenv("REPORT_OUTPUT_DIR", "generated_reports"))
         self.rules_path = Path(
             os.getenv("PRODUCT_RULES_PATH", "config/product_rules.yaml"))
+        self.capabilities_path = Path(
+            os.getenv("PRODUCT_CAPABILITIES_PATH", "config/product_capabilities.yaml"))
         self.data_retention_note = os.getenv(
             "DATA_RETENTION_NOTE",
             "Lead data is stored for presales follow-up and must be handled under your applicable privacy policy.",
