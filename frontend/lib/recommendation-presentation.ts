@@ -58,7 +58,8 @@ export type ArchitectureStage = {
   items: string[];
 };
 
-export function formatEnumLabel(value: string) {
+export function formatEnumLabel(value: string | null | undefined) {
+  if (!value) return "Not specified";
   if (ENUM_LABELS[value]) return ENUM_LABELS[value];
   return value
     .split(/[_-]+/)

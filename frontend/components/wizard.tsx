@@ -570,7 +570,13 @@ export function Wizard({
                   showError={shouldShowError(form, "pms_integration_required", attemptedSteps.includes(4))}
                 />
               ) : null}
-              <FieldInput form={form} name="target_launch_date" label="Target launch date" showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))} />
+              <FieldInput
+                form={form}
+                name="target_launch_date"
+                label="Target launch date"
+                type="date"
+                showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))}
+              />
               <FieldInput form={form} name="budget_range" label="Budget range" showError={shouldShowError(form, "budget_range", attemptedSteps.includes(4))} />
               <FieldTextArea form={form} name="existing_equipment" label="Existing equipment" showError={shouldShowError(form, "existing_equipment", attemptedSteps.includes(4))} />
             </div>
