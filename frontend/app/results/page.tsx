@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ResultsPanel } from "@/components/results-panel";
 import { api } from "@/lib/api";
-import { clearResultsPayload, getResultsPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
+import { clearResultsPayload, getResultsPayload, type ResultsPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
 
 type BannerState =
   | { kind: "success"; message: string }
@@ -14,13 +14,31 @@ type BannerState =
 
 export default function ResultsPage() {
   const router = useRouter();
-  const payload = getResultsPayload();
+  const [payload, setPayload] = useState<ResultsPayload | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState(false);
   const [startOverOpen, setStartOverOpen] = useState(false);
   const [banner, setBanner] = useState<BannerState>(null);
+
+  useEffect(() => {
+    setPayload(getResultsPayload());
+    setHydrated(true);
+  }, []);
+
+  if (!hydrated) {
+    return (
+      <main className="shell">
+        <section className="panel mx-auto max-w-3xl p-6 md:p-7">
+          <p className="text-sm uppercase tracking-[0.24em] text-blue">Loading results</p>
+          <h1 className="mt-2 text-3xl font-semibold text-ink">Preparing recommendation view</h1>
+          <p className="mt-3 text-sm text-slate-600">Loading the saved recommendation details for this session.</p>
+        </section>
+      </main>
+    );
+  }
 
   if (!payload) {
     return (

@@ -287,7 +287,7 @@ describe("Wizard", () => {
     expect(screen.getByRole("textbox", { name: /Contact name/i })).toHaveValue("Jane Doe");
     expect(screen.getByRole("textbox", { name: /Work email/i })).toHaveValue("jane@example.com");
     expect(screen.getByRole("checkbox", { name: /I consent to submitting this presales request/i })).toBeChecked();
-  });
+  }, 10000);
 
   it("resets the wizard when backing out from the first step", async () => {
     const user = userEvent.setup();

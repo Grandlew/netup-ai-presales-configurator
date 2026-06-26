@@ -5,18 +5,19 @@ import { useEffect, useState } from "react";
 
 import { ConversationReview } from "@/components/conversation-review";
 import { api } from "@/lib/api";
-import { getReviewPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
+import { getReviewPayload, type ReviewPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse } from "@/lib/types";
 
 export default function ReviewPage() {
   const router = useRouter();
+  const [payload, setPayload] = useState<ReviewPayload | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [options, setOptions] = useState<ConfigOptionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [payloadAvailable, setPayloadAvailable] = useState(false);
-  const payload = getReviewPayload();
 
   useEffect(() => {
-    setPayloadAvailable(Boolean(getReviewPayload()));
+    setPayload(getReviewPayload());
+    setHydrated(true);
 
     api
       .options()
@@ -24,7 +25,19 @@ export default function ReviewPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load configurator options."));
   }, []);
 
-  if (!payloadAvailable || !payload) {
+  if (!hydrated) {
+    return (
+      <main className="shell">
+        <section className="panel mx-auto max-w-3xl p-6 md:p-7">
+          <p className="text-sm uppercase tracking-[0.24em] text-blue">Loading review</p>
+          <h1 className="mt-2 text-3xl font-semibold text-ink">Preparing intake review</h1>
+          <p className="mt-3 text-sm text-slate-600">Loading the extracted project details for this session.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!payload) {
     return (
       <main className="shell">
         <section className="panel mx-auto max-w-3xl p-6 md:p-7">
