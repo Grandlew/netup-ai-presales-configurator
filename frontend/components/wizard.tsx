@@ -2,13 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import clsx from "clsx";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useForm, type FieldErrors, type FieldPath, type UseFormReturn } from "react-hook-form";
 
-import { ResultsPanel } from "@/components/results-panel";
 import { api } from "@/lib/api";
+import { setResultsPayload } from "@/lib/flow-storage";
 import { wizardSchema, type WizardFormValues } from "@/lib/schema";
-import type { ConfigOptionsResponse, Recommendation } from "@/lib/types";
+import type { ConfigOptionsResponse } from "@/lib/types";
 
 const steps = [
   {
@@ -51,12 +52,9 @@ const stepFields: Array<FieldPath<WizardFormValues>[]> = [
   ["expected_concurrent_viewers"],
   ["contact_name", "email", "consent_given"],
   [],
-];
+] as const;
 
-type BannerState =
-  | { kind: "success"; message: string }
-  | { kind: "info"; message: string }
-  | null;
+type BannerState = { kind: "info"; message: string } | null;
 
 function labelForAudience(projectType: string | undefined) {
   if (projectType === "hotel") return "Number of rooms";
@@ -84,7 +82,6 @@ function Spinner({ label }: { label: string }) {
 export function Wizard({
   options,
   onStartOver,
-  onResultsViewChange,
   focusRequestSignal = 0,
   seedValues,
   seedSignal = 0,
@@ -93,26 +90,19 @@ export function Wizard({
 }: {
   options: ConfigOptionsResponse;
   onStartOver?: () => void;
-  onResultsViewChange?: (active: boolean) => void;
   focusRequestSignal?: number;
   seedValues?: Partial<WizardFormValues> | Record<string, unknown> | null;
   seedSignal?: number;
   seedStartStep?: number;
   onDescribeProjectInstead?: () => void;
 }) {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
   const [attemptedSteps, setAttemptedSteps] = useState<number[]>([]);
-  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-  const [reportHtml, setReportHtml] = useState<string | null>(null);
-  const [leadId, setLeadId] = useState<string | null>(null);
-  const [submittedValues, setSubmittedValues] = useState<WizardFormValues | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [savingLead, setSavingLead] = useState(false);
-  const [startOverOpen, setStartOverOpen] = useState(false);
   const [banner, setBanner] = useState<BannerState>(null);
-  const resultsTopRef = useRef<HTMLDivElement | null>(null);
   const wizardTopRef = useRef<HTMLDivElement | null>(null);
 
   const form = useForm<WizardFormValues>({
@@ -138,16 +128,7 @@ export function Wizard({
   const archiveRequired = selectedServices.includes("catchup_tv") || selectedServices.includes("time_shift");
   const currentStep = steps[step];
   const progressPercent = ((step + 1) / steps.length) * 100;
-
-  useEffect(() => {
-    if (step === 6 && recommendation) {
-      resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [recommendation, step]);
-
-  useEffect(() => {
-    onResultsViewChange?.(step === 6 && Boolean(recommendation));
-  }, [onResultsViewChange, recommendation, step]);
+  const canGoBack = step > 0 && !loading;
 
   useEffect(() => {
     if (!focusRequestSignal) return;
@@ -180,17 +161,11 @@ export function Wizard({
       ...(seedValues as Partial<WizardFormValues>),
     });
     setAttemptedSteps([]);
-    setRecommendation(null);
-    setSubmittedValues(null);
-    setReportHtml(null);
-    setLeadId(null);
     setSubmitError(null);
     setBanner({ kind: "info", message: "Extracted project details were added to the guided configurator. Review and complete the remaining fields." });
     setMaxUnlockedStep(seedStartStep);
     setStep(seedStartStep);
   }, [form, seedSignal, seedStartStep, seedValues]);
-
-  const canGoBack = step > 0 && !loading && !savingLead;
 
   const markStepAttempted = (index: number) => {
     setAttemptedSteps((current) => (current.includes(index) ? current : [...current, index]));
@@ -215,53 +190,6 @@ export function Wizard({
     }
   }
 
-  async function ensureLeadAndReport(successMessage: string) {
-    if (!recommendation) return false;
-    const data = form.getValues();
-
-    setSavingLead(true);
-    setSubmitError(null);
-    try {
-      const resolvedLeadId =
-        leadId ??
-        (
-          await api.createLead({
-            contact_name: data.contact_name,
-            email: data.email,
-            company: data.company,
-            phone: data.phone,
-            country: data.country,
-            project_type: data.project_type,
-            requirements: data,
-            recommendation,
-            source: "wizard",
-            consent_given: data.consent_given,
-          })
-        ).id;
-
-      if (!leadId) {
-        setLeadId(resolvedLeadId);
-      }
-
-      if (!reportHtml) {
-        const report = await api.createReport({
-          lead_id: resolvedLeadId,
-          requirements: data,
-          recommendation,
-        });
-        setReportHtml(report.generated_content);
-      }
-
-      setBanner({ kind: "success", message: successMessage });
-      return true;
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "We could not save the lead details.");
-      return false;
-    } finally {
-      setSavingLead(false);
-    }
-  }
-
   async function handleGenerateRecommendation() {
     markStepAttempted(5);
     const valid = await form.trigger(stepFields[5], { shouldFocus: true });
@@ -277,26 +205,17 @@ export function Wizard({
 
     try {
       const data = form.getValues();
-      const recommendationResult = await api.recommend(data);
-      setSubmittedValues(data);
-      setRecommendation(recommendationResult);
-      setReportHtml(null);
-      setLeadId(null);
-      setMaxUnlockedStep(6);
-      setStep(6);
-    } catch (err) {
+      const recommendation = await api.recommend(data);
+      setResultsPayload({ recommendation, submittedValues: data });
+      router.push("/results");
+    } catch {
       setSubmitError("We could not generate the recommendation. Please check that the backend is running and try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleEditConfiguration() {
-    setStep(5);
-    setBanner({ kind: "info", message: "You can adjust the contact details or move back to refine the configuration." });
-  }
-
-  function handleStartOverConfirm() {
+  function handleStartOver() {
     form.reset({
       signal_sources: [],
       services: [],
@@ -311,31 +230,11 @@ export function Wizard({
     setStep(0);
     setMaxUnlockedStep(0);
     setAttemptedSteps([]);
-    setRecommendation(null);
-    setSubmittedValues(null);
-    setReportHtml(null);
-    setLeadId(null);
     setSubmitError(null);
     setBanner(null);
     setLoading(false);
-    setSavingLead(false);
-    setStartOverOpen(false);
     onStartOver?.();
   }
-
-  const resultActions = useMemo(
-    () => ({
-      onRequestEngineeringReview: () => ensureLeadAndReport("Engineering review has been requested and the lead was saved."),
-      onSaveLead: () => ensureLeadAndReport("Lead saved successfully for follow-up."),
-      onPrintReport: () => ensureLeadAndReport("The preliminary report is ready below for printing or download."),
-      onStartOver: () => setStartOverOpen(true),
-      onEditConfiguration: handleEditConfiguration,
-      savingLead,
-      reportHtml,
-      leadSaved: Boolean(leadId),
-    }),
-    [leadId, reportHtml, savingLead],
-  );
 
   return (
     <div className="space-y-6">
@@ -356,7 +255,7 @@ export function Wizard({
       <div className="panel p-5 md:p-6 print:hidden">
         <div className="hidden gap-1.5 xl:grid xl:grid-cols-7" aria-label="Wizard progress" data-testid="desktop-progress">
           {steps.map((item, index) => {
-            const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
+            const status = index < step ? "complete" : index === step ? "current" : "future";
             const canNavigate = index <= maxUnlockedStep;
 
             return (
@@ -383,7 +282,7 @@ export function Wizard({
                   )}
                   aria-hidden="true"
                 >
-                  {status === "complete" ? "✓" : index + 1}
+                  {status === "complete" ? "OK" : index + 1}
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[12px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
@@ -396,7 +295,7 @@ export function Wizard({
 
         <div className="hidden grid-cols-4 gap-2 md:grid lg:grid xl:hidden" aria-label="Wizard progress" data-testid="desktop-progress-compact">
           {steps.map((item, index) => {
-            const status = index < step || (index === 6 && recommendation) ? "complete" : index === step ? "current" : "future";
+            const status = index < step ? "complete" : index === step ? "current" : "future";
             const canNavigate = index <= maxUnlockedStep;
 
             return (
@@ -423,7 +322,7 @@ export function Wizard({
                   )}
                   aria-hidden="true"
                 >
-                  {status === "complete" ? "✓" : index + 1}
+                  {status === "complete" ? "OK" : index + 1}
                 </span>
                 <span className="min-w-0 text-[12px] font-semibold leading-tight text-current">{stepTitlesCompact[index]}</span>
               </button>
@@ -443,18 +342,10 @@ export function Wizard({
       </div>
 
       {banner ? (
-        <div
-          className={clsx(
-            "panel px-5 py-4 text-sm print:hidden",
-            banner.kind === "success" ? "border-blue/30 bg-blue-50 text-ink" : "border-slate-200 bg-paper text-slate-700",
-          )}
-          aria-live="polite"
-        >
+        <div className="panel border-slate-200 bg-paper px-5 py-4 text-sm text-slate-700 print:hidden" aria-live="polite">
           {banner.message}
         </div>
       ) : null}
-
-      <div ref={resultsTopRef} />
 
       <form
         onSubmit={(event) => {
@@ -465,12 +356,10 @@ export function Wizard({
         noValidate
       >
         <div className="step-panel" data-step-active="true">
-          {step < 6 ? (
-            <div className="mb-8 border-b border-slate-200 pb-6">
-              <h2 className="text-2xl font-semibold text-ink md:text-3xl">{currentStep.title}</h2>
-              <p className="mt-2 max-w-3xl text-sm text-slate-600">{currentStep.description}</p>
-            </div>
-          ) : null}
+          <div className="mb-8 border-b border-slate-200 pb-6">
+            <h2 className="text-2xl font-semibold text-ink md:text-3xl">{currentStep.title}</h2>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">{currentStep.description}</p>
+          </div>
 
           {step === 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -636,21 +525,6 @@ export function Wizard({
               </div>
             </div>
           ) : null}
-
-          {step === 6 && recommendation ? (
-            <ResultsPanel
-              recommendation={recommendation}
-              submittedValues={submittedValues}
-              reportHtml={reportHtml}
-              onRequestEngineeringReview={resultActions.onRequestEngineeringReview}
-              onSaveLead={resultActions.onSaveLead}
-              onPrintReport={resultActions.onPrintReport}
-              onStartOver={resultActions.onStartOver}
-              onEditConfiguration={resultActions.onEditConfiguration}
-              leadSaved={resultActions.leadSaved}
-              loadingAction={resultActions.savingLead}
-            />
-          ) : null}
         </div>
 
         <div aria-live="assertive" className="mt-4 print:hidden">
@@ -669,8 +543,14 @@ export function Wizard({
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <button
             type="button"
-            onClick={() => setStep((current) => Math.max(0, current - 1))}
-            disabled={!canGoBack}
+            onClick={() => {
+              if (step === 0) {
+                handleStartOver();
+                return;
+              }
+              setStep((current) => Math.max(0, current - 1));
+            }}
+            disabled={loading}
             className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none"
           >
             Back
@@ -697,35 +577,6 @@ export function Wizard({
           </div>
         </div>
       </form>
-
-      {startOverOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/35 px-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="start-over-title" className="panel w-full max-w-md p-6">
-            <h3 id="start-over-title" className="text-xl font-semibold text-ink">
-              Start over?
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              This clears the current wizard inputs, recommendation results, and conversation context for a fresh presales walkthrough.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setStartOverOpen(false)}
-                className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleStartOverConfirm}
-                className="min-h-12 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-              >
-                Confirm start over
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

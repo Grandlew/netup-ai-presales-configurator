@@ -1,25 +1,25 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ConversationPanel } from "@/components/conversation-panel";
-import { ConversationReview } from "@/components/conversation-review";
 import { Wizard } from "@/components/wizard";
 import { api } from "@/lib/api";
+import { consumeHomeNavigationIntent, setReviewPayload } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse, ExtractResponse } from "@/lib/types";
 
 export default function HomePage() {
+  const router = useRouter();
   const [options, setOptions] = useState<ConfigOptionsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conversationResetSignal, setConversationResetSignal] = useState(0);
-  const [resultsViewActive, setResultsViewActive] = useState(false);
-  const [entryMode, setEntryMode] = useState<"guided" | "conversation" | "conversation_review">("conversation");
+  const [entryMode, setEntryMode] = useState<"guided" | "conversation">("conversation");
   const [guidedFocusSignal, setGuidedFocusSignal] = useState(0);
   const [modeAnnouncement, setModeAnnouncement] = useState("");
   const [wizardSeedValues, setWizardSeedValues] = useState<Record<string, unknown> | null>(null);
   const [wizardSeedSignal, setWizardSeedSignal] = useState(0);
   const [wizardSeedStep, setWizardSeedStep] = useState(0);
-  const [conversationReview, setConversationReview] = useState<{ response: ExtractResponse; originalMessage: string } | null>(null);
   const wizardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -27,6 +27,27 @@ export default function HomePage() {
       .options()
       .then(setOptions)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load configurator options."));
+  }, []);
+
+  useEffect(() => {
+    const intent = consumeHomeNavigationIntent();
+    if (!intent) return;
+
+    if (intent.seedValues) {
+      setWizardSeedValues(intent.seedValues as Record<string, unknown>);
+      setWizardSeedStep(intent.seedStartStep ?? 0);
+      setWizardSeedSignal((current) => current + 1);
+    }
+
+    setEntryMode(intent.entryMode);
+    setModeAnnouncement(intent.entryMode === "guided" ? "Guided configurator selected." : "Natural-language intake selected.");
+
+    if (intent.entryMode === "guided") {
+      setGuidedFocusSignal((current) => current + 1);
+      requestAnimationFrame(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   }, []);
 
   function focusWizard(seedValues?: Record<string, unknown>, seedStep = 0) {
@@ -49,9 +70,8 @@ export default function HomePage() {
   }
 
   function showConversationReview(response: ExtractResponse, originalMessage: string) {
-    setConversationReview({ response, originalMessage });
-    setEntryMode("conversation_review");
-    setModeAnnouncement("Extracted project details ready for review.");
+    setReviewPayload({ response, originalMessage });
+    router.push("/review");
   }
 
   return (
@@ -60,7 +80,7 @@ export default function HomePage() {
         {modeAnnouncement}
       </div>
 
-      <section className={resultsViewActive || entryMode === "conversation_review" ? "grid gap-7" : "grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start"}>
+      <section className="grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start">
         <div id="guided-configurator" ref={wizardRef} className="min-w-0 space-y-5">
           <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
           <h1 className="max-w-4xl font-serif text-[2.7rem] leading-[1.05] text-ink md:text-[3.2rem] xl:text-[4rem]">
@@ -78,22 +98,21 @@ export default function HomePage() {
               options={options}
               onStartOver={() => {
                 setConversationResetSignal((current) => current + 1);
-                setConversationReview(null);
                 setWizardSeedValues(null);
                 setEntryMode("conversation");
               }}
-              onResultsViewChange={setResultsViewActive}
               focusRequestSignal={guidedFocusSignal}
               seedValues={wizardSeedValues}
               seedSignal={wizardSeedSignal}
               seedStartStep={wizardSeedStep}
-              onDescribeProjectInstead={entryMode === "guided" && !resultsViewActive ? showConversationMode : undefined}
+              onDescribeProjectInstead={entryMode === "guided" ? showConversationMode : undefined}
             />
           ) : (
             <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
           )}
         </div>
-        {!resultsViewActive && entryMode === "conversation" ? (
+
+        {entryMode === "conversation" ? (
           <aside className="min-w-0 space-y-5 xl:pt-2">
             <ConversationPanel
               onUseGuidedConfigurator={focusWizard}
@@ -110,15 +129,6 @@ export default function HomePage() {
               </ul>
             </div>
           </aside>
-        ) : null}
-        {!resultsViewActive && entryMode === "conversation_review" && options && conversationReview ? (
-          <ConversationReview
-            options={options}
-            response={conversationReview.response}
-            originalMessage={conversationReview.originalMessage}
-            onBackToIntake={showConversationMode}
-            onUseGuidedConfigurator={focusWizard}
-          />
         ) : null}
       </section>
     </main>

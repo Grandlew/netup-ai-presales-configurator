@@ -5,12 +5,23 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import HomePage from "@/app/page";
+import ResultsPage from "@/app/results/page";
+import ReviewPage from "@/app/review/page";
 import { ConversationPanel } from "@/components/conversation-panel";
 import { ResultsPanel } from "@/components/results-panel";
 import { Wizard } from "@/components/wizard";
 import type { WizardFormValues } from "@/lib/schema";
 import { api } from "@/lib/api";
+import { getResultsPayload, getReviewPayload, setResultsPayload, setReviewPayload } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse, Recommendation } from "@/lib/types";
+
+const routerPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: routerPush,
+  }),
+}));
 
 vi.mock("@/lib/api", () => ({
   api: {
@@ -112,6 +123,7 @@ const submittedValues: WizardFormValues = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.sessionStorage.clear();
   vi.mocked(api.options).mockResolvedValue(options);
   vi.mocked(api.recommend).mockResolvedValue(recommendationResponse);
   vi.mocked(api.createLead).mockResolvedValue({ id: "lead-1" });
@@ -232,7 +244,7 @@ describe("Wizard", () => {
     expect(screen.getByRole("checkbox", { name: /I consent to submitting this presales request/i })).toHaveAttribute("aria-invalid", "true");
   });
 
-  it("shows a loading state while generating the recommendation and then opens Step 7", async () => {
+  it("shows a loading state while generating the recommendation and then routes to the results page", async () => {
     const user = userEvent.setup();
     let resolveRecommend: (value: typeof recommendationResponse) => void = () => undefined;
     vi.mocked(api.recommend).mockImplementation(
@@ -253,9 +265,9 @@ describe("Wizard", () => {
     resolveRecommend(recommendationResponse);
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Request engineering review" })).toBeInTheDocument();
+      expect(routerPush).toHaveBeenCalledWith("/results");
     });
+    expect(getResultsPayload()?.recommendation.project_summary).toBe("180-room hotel IPTV deployment");
   });
 
   it("preserves form data after a failed recommendation request", async () => {
@@ -275,22 +287,18 @@ describe("Wizard", () => {
     expect(screen.getByRole("checkbox", { name: /I consent to submitting this presales request/i })).toBeChecked();
   });
 
-  it("supports start over confirmation and resets the wizard", async () => {
+  it("resets the wizard when backing out from the first step", async () => {
     const user = userEvent.setup();
-    render(<Wizard options={options} />);
+    const onStartOver = vi.fn();
+    render(<Wizard options={options} onStartOver={onStartOver} />);
 
-    await goToContactStep(user);
-    await fillContactDetails(user);
-    await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
-
-    await screen.findByRole("heading", { name: "Recommended product families" });
-    expect(screen.getAllByRole("button", { name: "Start over" })).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Start over" }));
-    await user.click(screen.getByRole("button", { name: "Confirm start over" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: /Project type/i }), "hotel");
+    await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
+    await user.click(screen.getByRole("button", { name: "Back" }));
 
     expect(screen.getByRole("heading", { name: "Project profile" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("");
     expect(screen.getByText("Step 1 of 7")).toBeInTheDocument();
+    expect(onStartOver).toHaveBeenCalledTimes(1);
   });
 
   it("renders compact mobile progress text", () => {
@@ -311,12 +319,12 @@ describe("Wizard", () => {
   }, 10000);
 
   it("renders recommendation cards, capacity cards, and missing information on the results page", async () => {
-    const user = userEvent.setup();
-    render(<Wizard options={options} />);
+    setResultsPayload({
+      recommendation: recommendationResponse as Recommendation,
+      submittedValues,
+    });
 
-    await goToContactStep(user);
-    await fillContactDetails(user);
-    await user.click(screen.getByRole("button", { name: "Generate preliminary recommendation" }));
+    render(<ResultsPage />);
 
     expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
@@ -341,7 +349,9 @@ describe("Wizard", () => {
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(routerPush).toHaveBeenCalledWith("/results");
+    });
     expect(api.recommend).toHaveBeenCalledTimes(2);
   }, 10000);
 });
@@ -674,7 +684,7 @@ describe("HomePage layout", () => {
     expect(screen.getByRole("spinbutton", { name: /Number of subscribers, rooms, or endpoints/i })).toHaveValue(180);
   });
 
-  it("shows extracted results on a separate review screen and lets the user fill missing info before continuing", async () => {
+  it("routes extracted results to the separate review page", async () => {
     const user = userEvent.setup();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {
@@ -704,57 +714,38 @@ describe("HomePage layout", () => {
     await user.click(screen.getByRole("button", { name: "Extract requirements" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
+      expect(routerPush).toHaveBeenCalledWith("/review");
     });
-
-    expect(screen.getByText("Customer confirmation form")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: /Delivery mode/i })).toBeInTheDocument();
-
-    await user.selectOptions(screen.getByRole("combobox", { name: /Delivery mode/i }), "local_network");
-    await user.click(screen.getByRole("button", { name: "Open guided configurator" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Describe my project instead" })).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("combobox", { name: /Project type/i })).toHaveValue("hotel");
-    expect(screen.getByRole("spinbutton", { name: /Number of rooms/i })).toHaveValue(180);
+    expect(getReviewPayload()?.response.next_question).toBe("Will delivery stay on a local network, go over OTT/internet, or both?");
   });
 
-  it("lets the user edit extracted fields and unlocks a continue-to-recommendation shortcut when required fields are complete", async () => {
+  it("lets the user edit extracted fields on the review page and unlocks the recommendation shortcut", async () => {
     const user = userEvent.setup();
-    vi.mocked(api.extract).mockResolvedValueOnce({
-      extracted_requirements: {
-        project_type: "hotel",
-        subscribers_or_rooms: 180,
-        number_of_channels: 85,
-        signal_sources: ["satellite", "ip_streams"],
-        services: ["catchup_tv"],
-        viewer_devices: ["smart_tv", "mobile"],
-        delivery_mode: "local_network",
+    setReviewPayload({
+      response: {
+        extracted_requirements: {
+          project_type: "hotel",
+          subscribers_or_rooms: 180,
+          number_of_channels: 85,
+          signal_sources: ["satellite", "ip_streams"],
+          services: ["catchup_tv"],
+          viewer_devices: ["smart_tv", "mobile"],
+          delivery_mode: "local_network",
+        },
+        missing_required_fields: [],
+        next_question: null,
+        ready_for_recommendation: true,
+        ai_available: true,
+        extraction_succeeded: true,
+        error_code: null,
+        message: null,
       },
-      missing_required_fields: [],
-      next_question: null,
-      ready_for_recommendation: true,
-      ai_available: true,
-      extraction_succeeded: true,
-      error_code: null,
-      message: null,
+      originalMessage: "We have a 180-room hotel project",
     });
 
-    render(<HomePage />);
+    render(<ReviewPage />);
 
-    await waitFor(() => {
-      expect(api.options).toHaveBeenCalled();
-    });
-
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "We have a 180-room hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
-
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
-    });
-
+    expect(await screen.findByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue to recommendation" })).toBeInTheDocument();
 
     await user.clear(screen.getByRole("spinbutton", { name: /Rooms or subscribers/i }));
@@ -762,7 +753,7 @@ describe("HomePage layout", () => {
     await user.click(screen.getByRole("button", { name: "Continue to recommendation" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Capacity and reliability" })).toBeInTheDocument();
+      expect(routerPush).toHaveBeenCalledWith("/");
     });
   });
 
