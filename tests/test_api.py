@@ -115,7 +115,9 @@ def test_lead_and_report_endpoints(client):
     assert pdf_download.status_code == 200
     assert pdf_download.headers["content-type"] == "application/pdf"
     assert pdf_download.headers["content-disposition"].endswith(f'"netup-preliminary-report-{report_id}.pdf"')
-    assert pdf_download.content.startswith(b"%PDF-1.4")
+    assert pdf_download.content.startswith(b"%PDF-")
+    assert b"ReportLab Generated PDF document" in pdf_download.content
+    assert pdf_download.content.rstrip().endswith(b"%%EOF")
 
     doc_download = client.get(f"/api/reports/{report_id}/download?format=doc")
     assert doc_download.status_code == 200

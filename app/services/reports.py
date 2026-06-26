@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 import html
+import io
 import re
 from textwrap import wrap
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfgen import canvas
 
 from app.schemas import CustomerRequirements, RecommendationResponse
 
@@ -77,8 +82,31 @@ def render_report_doc(report_html: str) -> bytes:
 
 
 def render_report_pdf(report_html: str) -> bytes:
-    text_lines = _html_to_text_lines(report_html)
-    return _build_simple_pdf(text_lines)
+    lines = _html_to_text_lines(report_html)
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    left_margin = 50
+    top_margin = height - 50
+    bottom_margin = 50
+    line_height = 14
+    y_position = top_margin
+
+    pdf.setTitle("NetUP Preliminary Solution Recommendation")
+    pdf.setAuthor("NetUP AI Presales Configurator")
+    pdf.setFont("Helvetica", 11)
+
+    for line in lines:
+        if y_position <= bottom_margin:
+            pdf.showPage()
+            pdf.setFont("Helvetica", 11)
+            y_position = top_margin
+
+        pdf.drawString(left_margin, y_position, _truncate_line_for_page(line, width - (left_margin * 2)))
+        y_position -= line_height
+
+    pdf.save()
+    return buffer.getvalue()
 
 
 def _html_to_text_lines(report_html: str) -> list[str]:
@@ -92,92 +120,19 @@ def _html_to_text_lines(report_html: str) -> list[str]:
 
     lines: list[str] = []
     for raw_line in normalized.splitlines():
-      stripped = " ".join(raw_line.split())
-      if not stripped:
-          continue
-      wrapped = wrap(stripped, width=90) or [""]
-      lines.extend(wrapped)
+        stripped = " ".join(raw_line.split())
+        if not stripped:
+            continue
+        lines.extend(wrap(stripped, width=92) or [""])
 
     return lines
 
 
-def _build_simple_pdf(lines: list[str]) -> bytes:
-    max_lines_per_page = 46
-    pages = [lines[index:index + max_lines_per_page] for index in range(0, len(lines), max_lines_per_page)] or [[]]
-    objects: list[bytes] = []
+def _truncate_line_for_page(value: str, max_width: float) -> str:
+    if stringWidth(value, "Helvetica", 11) <= max_width:
+        return value
 
-    def add_object(content: bytes) -> int:
-        objects.append(content)
-        return len(objects)
-
-    font_id = add_object(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    page_ids: list[int] = []
-    content_ids: list[int] = []
-    pages_id_placeholder = len(objects) + 1
-
-    for page_lines in pages:
-        content_stream = _page_stream(page_lines)
-        content_id = add_object(
-            f"<< /Length {len(content_stream)} >>\nstream\n".encode("ascii")
-            + content_stream
-            + b"\nendstream"
-        )
-        content_ids.append(content_id)
-        page_id = add_object(b"")
-        page_ids.append(page_id)
-
-    pages_kids = " ".join(f"{page_id} 0 R" for page_id in page_ids)
-    pages_id = add_object(f"<< /Type /Pages /Kids [{pages_kids}] /Count {len(page_ids)} >>".encode("ascii"))
-
-    for page_id, content_id in zip(page_ids, content_ids, strict=True):
-        objects[page_id - 1] = (
-            f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 612 792] "
-            f"/Resources << /Font << /F1 {font_id} 0 R >> >> /Contents {content_id} 0 R >>"
-        ).encode("ascii")
-
-    catalog_id = add_object(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
-
-    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    offsets = [0]
-    for index, obj in enumerate(objects, start=1):
-        offsets.append(len(pdf))
-        pdf.extend(f"{index} 0 obj\n".encode("ascii"))
-        pdf.extend(obj)
-        pdf.extend(b"\nendobj\n")
-
-    xref_offset = len(pdf)
-    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
-    pdf.extend(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
-        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
-
-    pdf.extend(
-        (
-            f"trailer\n<< /Size {len(objects) + 1} /Root {catalog_id} 0 R >>\n"
-            f"startxref\n{xref_offset}\n%%EOF"
-        ).encode("ascii")
-    )
-    return bytes(pdf)
-
-
-def _page_stream(lines: list[str]) -> bytes:
-    y_position = 756
-    commands = ["BT", "/F1 11 Tf", "50 756 Td", "14 TL"]
-    first_line = True
-
-    for line in lines:
-        sanitized = _escape_pdf_text(line)
-        if first_line:
-            commands.append(f"({sanitized}) Tj")
-            first_line = False
-        else:
-            commands.append("T*")
-            commands.append(f"({sanitized}) Tj")
-        y_position -= 14
-
-    commands.append("ET")
-    return "\n".join(commands).encode("latin-1", errors="replace")
-
-
-def _escape_pdf_text(value: str) -> str:
-    return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    truncated = value
+    while truncated and stringWidth(f"{truncated}...", "Helvetica", 11) > max_width:
+        truncated = truncated[:-1]
+    return f"{truncated}..."
