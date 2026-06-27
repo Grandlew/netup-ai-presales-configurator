@@ -1,6 +1,6 @@
 import React from "react";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
@@ -12,7 +12,7 @@ import { ResultsPanel } from "@/components/results-panel";
 import { Wizard } from "@/components/wizard";
 import type { WizardFormValues } from "@/lib/schema";
 import { api } from "@/lib/api";
-import { getResultsPayload, getReviewPayload, setResultsPayload, setReviewPayload } from "@/lib/flow-storage";
+import { consumeHomeNavigationIntent, getResultsPayload, getReviewPayload, setResultsPayload, setReviewPayload } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse, Recommendation } from "@/lib/types";
 
 const routerPush = vi.fn();
@@ -891,7 +891,7 @@ describe("HomePage layout", () => {
     expect(getReviewPayload()?.response.next_question).toBe("Will delivery stay on a local network, go over OTT/internet, or both?");
   });
 
-  it("lets the user edit extracted fields on the review page and unlocks the recommendation shortcut", async () => {
+  it("renders confirmed fields separately from inferred fields on the review page", async () => {
     const user = userEvent.setup();
     setReviewPayload({
       response: {
@@ -902,31 +902,174 @@ describe("HomePage layout", () => {
           signal_sources: ["satellite", "ip_streams"],
           services: ["catchup_tv"],
           viewer_devices: ["smart_tv", "mobile"],
-          delivery_mode: "local_network",
         },
-        missing_required_fields: [],
-        next_question: null,
-        ready_for_recommendation: true,
+        missing_required_fields: ["Delivery mode"],
+        next_question: "What TV model or series will be installed in the hotel rooms?",
+        ready_for_recommendation: false,
         ai_available: true,
         extraction_succeeded: true,
         error_code: null,
         message: null,
       },
-      originalMessage: "We have a 180-room hotel project",
+      originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
 
     render(<ReviewPage />);
 
     expect(await screen.findByRole("heading", { name: "Customer confirmation" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue to recommendation" })).toBeInTheDocument();
+    const inferredSection = screen.getByRole("heading", { name: "Suggested interpretations" }).closest("section");
+    expect(inferredSection).not.toBeNull();
+    expect(within(inferredSection as HTMLElement).getByText("Live TV")).toBeInTheDocument();
+    expect(within(inferredSection as HTMLElement).getByText("EPG")).toBeInTheDocument();
+    expect(within(inferredSection as HTMLElement).getAllByText(/Inferred - please confirm/i)).toHaveLength(2);
 
-    await user.clear(screen.getByRole("spinbutton", { name: /Rooms or subscribers/i }));
-    await user.type(screen.getByRole("spinbutton", { name: /Rooms or subscribers/i }), "220");
-    await user.click(screen.getByRole("button", { name: "Continue to recommendation" }));
+    const summarySection = screen.getByRole("heading", { name: "Extracted project summary" }).closest("section");
+    expect(summarySection).not.toBeNull();
+    expect(within(summarySection as HTMLElement).getByText("Catch-up TV")).toBeInTheDocument();
+    expect(within(summarySection as HTMLElement).queryByText("Live TV")).not.toBeInTheDocument();
+    expect(within(summarySection as HTMLElement).queryByText("EPG")).not.toBeInTheDocument();
+
+    const acceptButtons = screen.getAllByRole("button", { name: "Accept" });
+    await user.click(acceptButtons[0]);
+    await user.click(acceptButtons[1]);
+    expect(screen.getByRole("button", { name: "Confirm extracted details" })).toBeInTheDocument();
+  });
+
+  it("shows the TV-model follow-up with the matching field and split hotel delivery controls", async () => {
+    const user = userEvent.setup();
+    setReviewPayload({
+      response: {
+        extracted_requirements: {
+          project_type: "hotel",
+          subscribers_or_rooms: 180,
+          number_of_channels: 85,
+          signal_sources: ["satellite", "ip_streams"],
+          services: ["catchup_tv"],
+          viewer_devices: ["smart_tv", "mobile"],
+        },
+        missing_required_fields: ["Delivery mode"],
+        next_question: "What TV model or series will be installed in the hotel rooms?",
+        ready_for_recommendation: false,
+        ai_available: true,
+        extraction_succeeded: true,
+        error_code: null,
+        message: null,
+      },
+      originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
+    });
+
+    render(<ReviewPage />);
+
+    expect(await screen.findByDisplayValue("LG")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "TV model or series" })).toBeInTheDocument();
+
+    const advancedSummary = screen.getByText("Optional advanced details");
+    await user.click(advancedSummary);
+
+    expect(await screen.findByRole("combobox", { name: "Room-TV delivery" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Mobile / web delivery" })).toBeInTheDocument();
+  });
+
+  it("shows catch-up fields and keeps storage sizing pending until retention is provided", async () => {
+    const user = userEvent.setup();
+    setReviewPayload({
+      response: {
+        extracted_requirements: {
+          project_type: "hotel",
+          subscribers_or_rooms: 180,
+          number_of_channels: 85,
+          signal_sources: ["satellite", "ip_streams"],
+          services: ["catchup_tv"],
+          viewer_devices: ["smart_tv", "mobile"],
+        },
+        missing_required_fields: ["Delivery mode"],
+        next_question: "What TV model or series will be installed in the hotel rooms?",
+        ready_for_recommendation: false,
+        ai_available: true,
+        extraction_succeeded: true,
+        error_code: null,
+        message: null,
+      },
+      originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
+    });
+
+    render(<ReviewPage />);
+
+    expect(await screen.findByText("Storage sizing pending")).toBeInTheDocument();
+    await user.click(screen.getByText("Optional advanced details"));
+    expect(await screen.findByRole("spinbutton", { name: "Retention period in days" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Number of channels to record" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Average bitrate (Mbps)" })).toBeInTheDocument();
+  });
+
+  it("continues with guided configuration at the first unresolved field and preserves extracted values", async () => {
+    const user = userEvent.setup();
+    setReviewPayload({
+      response: {
+        extracted_requirements: {
+          project_type: "hotel",
+          subscribers_or_rooms: 180,
+          number_of_channels: 85,
+          signal_sources: ["satellite", "ip_streams"],
+          services: ["catchup_tv"],
+          viewer_devices: ["smart_tv", "mobile"],
+        },
+        missing_required_fields: ["Delivery mode"],
+        next_question: "What TV model or series will be installed in the hotel rooms?",
+        ready_for_recommendation: false,
+        ai_available: true,
+        extraction_succeeded: true,
+        error_code: null,
+        message: null,
+      },
+      originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
+    });
+
+    render(<ReviewPage />);
+
+    await screen.findByRole("heading", { name: "Customer confirmation" });
+    await user.click(screen.getByRole("button", { name: "Continue with guided configuration" }));
 
     await waitFor(() => {
       expect(routerPush).toHaveBeenCalledWith("/");
     });
+
+    const intent = consumeHomeNavigationIntent();
+    expect(intent?.entryMode).toBe("guided");
+    expect(intent?.seedStartStep).toBe(3);
+    expect(intent?.seedValues).toMatchObject({
+      project_type: "hotel",
+      subscribers_or_rooms: 180,
+      number_of_channels: 85,
+    });
+  });
+
+  it("keeps optional advanced details collapsed by default", async () => {
+    setReviewPayload({
+      response: {
+        extracted_requirements: {
+          project_type: "hotel",
+          subscribers_or_rooms: 180,
+          number_of_channels: 85,
+          signal_sources: ["satellite", "ip_streams"],
+          services: ["catchup_tv"],
+          viewer_devices: ["smart_tv", "mobile"],
+        },
+        missing_required_fields: ["Delivery mode"],
+        next_question: "What TV model or series will be installed in the hotel rooms?",
+        ready_for_recommendation: false,
+        ai_available: true,
+        extraction_succeeded: true,
+        error_code: null,
+        message: null,
+      },
+      originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
+    });
+
+    render(<ReviewPage />);
+
+    await screen.findByRole("heading", { name: "Customer confirmation" });
+    expect(screen.queryByRole("spinbutton", { name: "Retention period in days" })).not.toBeInTheDocument();
   });
 
   it("renders all seven complete step labels without truncation in desktop navigation", async () => {

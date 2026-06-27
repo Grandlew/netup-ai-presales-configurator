@@ -46,16 +46,17 @@ const stepTitlesCompact = ["Profile", "Sources", "Services", "Delivery", "Capaci
 
 const mobileViewingScopeOptions = [
   { value: "hotel_wifi_only", label: "Hotel Wi-Fi only" },
-  { value: "off_property_access", label: "Outside the property" },
+  { value: "off_property_access", label: "Internet / OTT outside the property" },
   { value: "both", label: "Both" },
-  { value: "staff_internal_only", label: "Staff/internal only" },
+  { value: "unknown", label: "Unknown" },
 ] as const;
 
 const inPropertyNetworkOptions = [
-  { value: "ethernet", label: "Ethernet" },
-  { value: "wifi", label: "Wi-Fi" },
-  { value: "coaxial", label: "Coaxial cable" },
-  { value: "hybrid", label: "Hybrid network" },
+  { value: "managed_lan_multicast", label: "Managed LAN multicast" },
+  { value: "managed_lan_unicast", label: "Managed LAN unicast" },
+  { value: "coaxial_dvb_c", label: "Coaxial / DVB-C" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "unknown", label: "Unknown" },
 ] as const;
 
 const stepFields: Array<FieldPath<WizardFormValues>[]> = [
@@ -485,7 +486,7 @@ export function Wizard({
                     <FieldSelect
                       form={form}
                       name="in_property_network_type"
-                      label="In-property TV delivery network"
+                      label="Room-TV delivery method"
                       options={[...inPropertyNetworkOptions]}
                       showError={shouldShowError(form, "in_property_network_type", attemptedSteps.includes(3))}
                     />
@@ -510,7 +511,7 @@ export function Wizard({
                   <FieldSelect
                     form={form}
                     name="mobile_viewing_scope"
-                    label="Mobile viewing scope"
+                    label="Mobile / web delivery"
                     options={[...mobileViewingScopeOptions]}
                     showError={shouldShowError(form, "mobile_viewing_scope", attemptedSteps.includes(3))}
                   />

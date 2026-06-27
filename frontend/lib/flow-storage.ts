@@ -6,6 +6,7 @@ import type { ExtractResponse, Recommendation } from "@/lib/types";
 const REVIEW_PAYLOAD_KEY = "netup.reviewPayload";
 const RESULTS_PAYLOAD_KEY = "netup.resultsPayload";
 const HOME_NAVIGATION_KEY = "netup.homeNavigation";
+const REVIEW_AUDIT_TRACE_KEY = "netup.reviewAuditTrace";
 
 type HomeNavigationIntent = {
   entryMode: "guided" | "conversation";
@@ -64,6 +65,18 @@ export function getReviewPayload() {
 
 export function clearReviewPayload() {
   removeItem(REVIEW_PAYLOAD_KEY);
+}
+
+export function setReviewAuditTrace(trace: unknown) {
+  writeJson(REVIEW_AUDIT_TRACE_KEY, trace);
+}
+
+export function getReviewAuditTrace() {
+  return readJson<unknown>(REVIEW_AUDIT_TRACE_KEY);
+}
+
+export function clearReviewAuditTrace() {
+  removeItem(REVIEW_AUDIT_TRACE_KEY);
 }
 
 export function setResultsPayload(payload: ResultsPayload) {
