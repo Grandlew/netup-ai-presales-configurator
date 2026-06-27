@@ -351,11 +351,13 @@ export function ConversationReview({
   const hotelSmartTvFlow = projectType === "hotel" && selectedDevices.includes("smart_tv");
   const mobileSelected = selectedDevices.includes("mobile");
   const catchupSelected = selectedServices.includes("catchup_tv");
+  const liveTvSelected = selectedServices.includes("live_tv");
+  const epgSelected = selectedServices.includes("epg");
 
   const inferenceItems = useMemo(() => {
     const items: InferenceItem[] = [];
 
-    if (Number(formValues.number_of_channels ?? 0) > 0 && !selectedServices.includes("live_tv")) {
+    if (Number(formValues.number_of_channels ?? 0) > 0 && !liveTvSelected) {
       items.push({
         key: "live_tv",
         label: inferredServiceLabel("live_tv"),
@@ -363,7 +365,7 @@ export function ConversationReview({
       });
     }
 
-    if (selectedServices.includes("catchup_tv") && !selectedServices.includes("epg")) {
+    if (catchupSelected && !epgSelected) {
       items.push({
         key: "epg",
         label: inferredServiceLabel("epg"),
@@ -372,7 +374,7 @@ export function ConversationReview({
     }
 
     return items;
-  }, [formValues.number_of_channels, selectedServices]);
+  }, [catchupSelected, epgSelected, formValues.number_of_channels, liveTvSelected]);
 
   useEffect(() => {
     setInferenceDecisions((current) => {
@@ -380,6 +382,11 @@ export function ConversationReview({
       inferenceItems.forEach((item) => {
         next[item.key] = current[item.key];
       });
+
+      if (current.live_tv === next.live_tv && current.epg === next.epg) {
+        return current;
+      }
+
       return next;
     });
   }, [inferenceItems]);
