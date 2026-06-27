@@ -58,6 +58,33 @@ def _label(value) -> str:
     return str(value)
 
 
+def _normalize_in_property_network(value) -> str | None:
+    if value is None:
+        return None
+
+    raw = _label(value)
+    aliases = {
+        "managed_lan_multicast": "ethernet",
+        "managed_lan_unicast": "ethernet",
+        "coaxial_dvb_c": "coaxial",
+    }
+    return aliases.get(raw, raw)
+
+
+def _in_property_network_label(value) -> str:
+    labels = {
+        "managed_lan_multicast": "Managed LAN multicast",
+        "managed_lan_unicast": "Managed LAN unicast",
+        "coaxial_dvb_c": "Coaxial / DVB-C",
+        "ethernet": "Ethernet",
+        "wifi": "Wi-Fi",
+        "coaxial": "Coaxial cable",
+        "hybrid": "Hybrid network",
+    }
+    raw = _label(value)
+    return labels.get(raw, raw.replace("_", " ").title())
+
+
 def _evaluate_conditions(req: CustomerRequirements, conditions: dict) -> RuleMatch:
     passed: list[str] = []
     failed: list[str] = []
@@ -72,7 +99,7 @@ def _evaluate_conditions(req: CustomerRequirements, conditions: dict) -> RuleMat
                 (passed if ok else failed).append(f"{field_name} >= {expected['min']}")
             if "in" in expected:
                 candidates = set(expected["in"])
-                ok = _label(actual) in candidates
+                ok = _normalize_in_property_network(actual) in candidates if field_name == "in_property_network_type" else _label(actual) in candidates
                 (passed if ok else failed).append(f"{field_name} in {sorted(candidates)}")
             if "contains_any" in expected:
                 candidates = set(expected["contains_any"])
@@ -90,6 +117,8 @@ def _evaluate_conditions(req: CustomerRequirements, conditions: dict) -> RuleMat
             continue
 
         ok = _label(actual) == expected
+        if field_name == "in_property_network_type":
+            ok = _normalize_in_property_network(actual) == expected
         (passed if ok else failed).append(f"{field_name} == {expected}")
 
     return RuleMatch(matched=not failed, passed=passed, failed=failed)
@@ -405,7 +434,7 @@ def _build_architecture(
         node(
             "tv_network",
             (
-                f"{req.in_property_network_type.value.replace('_', ' ').title()} in-property TV network"
+                f"{_in_property_network_label(req.in_property_network_type)} in-property TV network"
                 if req.in_property_network_type
                 else "In-property TV delivery network"
             ),

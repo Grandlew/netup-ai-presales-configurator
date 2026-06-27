@@ -100,3 +100,42 @@ def test_duplicate_recommendations_are_suppressed():
     result = recommend(sample_hotel_requirements())
     products = [item.product for item in result.recommendations]
     assert products.count("NetUP Stream Processor") == 1
+
+
+def test_backend_accepts_new_room_tv_delivery_values():
+    req = sample_hotel_requirements().model_copy(
+        update={
+            "in_property_network_type": "managed_lan_multicast",
+            "hotel_tv_brand": "LG",
+            "hotel_tv_model": "UR780H",
+            "hotel_tv_hospitality_grade": True,
+        }
+    )
+
+    result = recommend(req)
+
+    assert result.recommended_architecture is not None
+    tv_network_nodes = [
+        node
+        for branch in result.recommended_architecture.branches
+        for node in branch.nodes
+        if node.id == "tv_network"
+    ]
+    assert tv_network_nodes
+    assert "Managed LAN multicast" in tv_network_nodes[0].label
+
+
+def test_backend_normalizes_blank_archive_days():
+    req = CustomerRequirements(
+        project_type="hotel",
+        subscribers_or_rooms=180,
+        expected_concurrent_viewers=100,
+        number_of_channels=85,
+        signal_sources=["satellite", "ip_streams"],
+        services=["live_tv", "catchup_tv"],
+        viewer_devices=["smart_tv", "mobile"],
+        delivery_mode="both",
+        archive_days="",
+    )
+
+    assert req.archive_days == 0

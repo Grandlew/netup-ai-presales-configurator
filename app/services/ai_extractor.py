@@ -224,7 +224,12 @@ class ConversationExtractor:
             "hotel_tv_os": {"anyOf": [{"type": "string"}, {"type": "null"}]},
             "lg_procentric_direct_confirmed": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
             "mobile_viewing_scope": {"anyOf": [{"type": "string", "enum": ["hotel_wifi_only", "off_property_access", "both", "staff_internal_only"]}, {"type": "null"}]},
-            "in_property_network_type": {"anyOf": [{"type": "string", "enum": ["ethernet", "wifi", "coaxial", "hybrid"]}, {"type": "null"}]},
+            "in_property_network_type": {
+                "anyOf": [
+                    {"type": "string", "enum": ["managed_lan_multicast", "managed_lan_unicast", "coaxial_dvb_c", "ethernet", "wifi", "coaxial", "hybrid"]},
+                    {"type": "null"},
+                ]
+            },
             "pms_integration_required": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},
             "channels_to_record": {"anyOf": [{"type": "integer", "minimum": 0, "maximum": 20000}, {"type": "null"}]},
             "content_protection_required": {"anyOf": [{"type": "boolean"}, {"type": "null"}]},

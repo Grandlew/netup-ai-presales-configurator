@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ProjectType(str, Enum):
@@ -65,10 +65,19 @@ class MobileViewingScope(str, Enum):
 
 
 class InPropertyNetworkType(str, Enum):
+    MANAGED_LAN_MULTICAST = "managed_lan_multicast"
+    MANAGED_LAN_UNICAST = "managed_lan_unicast"
+    COAX_DVB_C = "coaxial_dvb_c"
     ETHERNET = "ethernet"
     WIFI = "wifi"
     COAX = "coaxial"
     HYBRID = "hybrid"
+
+
+def _normalize_blank_numeric(value: Any, *, blank_value: Any) -> Any:
+    if value == "":
+        return blank_value
+    return value
 
 
 class ClaimStatus(str, Enum):
@@ -134,6 +143,16 @@ class CustomerRequirements(BaseModel):
             raise ValueError("expected_concurrent_viewers cannot exceed subscribers_or_rooms")
         return self
 
+    @field_validator("archive_days", mode="before")
+    @classmethod
+    def normalize_archive_days(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=0)
+
+    @field_validator("channels_to_record", mode="before")
+    @classmethod
+    def normalize_channels_to_record(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=None)
+
 
 class PartialCustomerRequirements(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -178,6 +197,16 @@ class PartialCustomerRequirements(BaseModel):
     phone: str | None = None
     additional_project_notes: str | None = None
 
+    @field_validator("archive_days", mode="before")
+    @classmethod
+    def normalize_archive_days(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=None)
+
+    @field_validator("channels_to_record", mode="before")
+    @classmethod
+    def normalize_channels_to_record(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=None)
+
 
 class AIExtractedRequirements(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
@@ -221,6 +250,16 @@ class AIExtractedRequirements(BaseModel):
     email: str | None = None
     phone: str | None = None
     additional_project_notes: str | None = None
+
+    @field_validator("archive_days", mode="before")
+    @classmethod
+    def normalize_archive_days(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=None)
+
+    @field_validator("channels_to_record", mode="before")
+    @classmethod
+    def normalize_channels_to_record(cls, value: Any):
+        return _normalize_blank_numeric(value, blank_value=None)
 
 
 class AIExtractionPayload(BaseModel):

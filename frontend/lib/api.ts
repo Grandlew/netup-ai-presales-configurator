@@ -69,10 +69,52 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
   return response.blob();
 }
 
+function normalizeRecommendBody(body: Record<string, unknown>) {
+  const normalized = { ...body };
+
+  if (normalized.archive_days === "") {
+    normalized.archive_days = 0;
+  }
+
+  if (normalized.channels_to_record === "") {
+    normalized.channels_to_record = null;
+  }
+
+  if (normalized.available_storage_tb === "") {
+    normalized.available_storage_tb = null;
+  }
+
+  if (normalized.expected_concurrent_viewers === "") {
+    normalized.expected_concurrent_viewers = null;
+  }
+
+  if (normalized.existing_network_bandwidth_mbps === "") {
+    normalized.existing_network_bandwidth_mbps = null;
+  }
+
+  if (normalized.estimated_vod_library_size_tb === "") {
+    normalized.estimated_vod_library_size_tb = null;
+  }
+
+  const networkTypeMap: Record<string, string | null> = {
+    managed_lan_multicast: "ethernet",
+    managed_lan_unicast: "ethernet",
+    coaxial_dvb_c: "coaxial",
+    hybrid: "hybrid",
+    unknown: null,
+  };
+
+  if (typeof normalized.in_property_network_type === "string") {
+    normalized.in_property_network_type = networkTypeMap[normalized.in_property_network_type] ?? normalized.in_property_network_type;
+  }
+
+  return normalized;
+}
+
 export const api = {
   options: () => request<ConfigOptionsResponse>("/api/config/options"),
   recommend: (body: Record<string, unknown>) =>
-    request<Recommendation>("/recommend", { method: "POST", body: JSON.stringify(body) }),
+    request<Recommendation>("/recommend", { method: "POST", body: JSON.stringify(normalizeRecommendBody(body)) }),
   extract: (body: Record<string, unknown>) =>
     request<ExtractResponse>("/api/conversation/extract", { method: "POST", body: JSON.stringify(body) }),
   createLead: (body: Record<string, unknown>) =>
