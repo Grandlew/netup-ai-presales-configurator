@@ -18,6 +18,15 @@ if LOCAL_ENV_PATH.exists():
     load_dotenv(LOCAL_ENV_PATH, override=False)
 
 
+def _clean_env_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {'"', "'"}:
+        cleaned = cleaned[1:-1].strip()
+    return cleaned or None
+
+
 def _parse_csv(value: str | None, *, default: tuple[str, ...] = ()) -> list[str]:
     source = value if value is not None else ",".join(default)
     normalized: list[str] = []
@@ -31,11 +40,11 @@ def _parse_csv(value: str | None, *, default: tuple[str, ...] = ()) -> list[str]
 class Settings:
     def __init__(self) -> None:
         self.app_name = "NetUP AI Presales Configurator"
-        self.environment = os.getenv("APP_ENV", "development").strip().lower() or "development"
-        self.database_url = os.getenv("DATABASE_URL", f"sqlite:///{(BASE_DIR / 'netup_presales.db').as_posix()}")
-        self.cors_origins = _parse_csv(os.getenv("CORS_ORIGINS"), default=DEFAULT_CORS_ORIGINS)
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+        self.environment = (_clean_env_value(os.getenv("APP_ENV")) or "development").lower()
+        self.database_url = _clean_env_value(os.getenv("DATABASE_URL")) or f"sqlite:///{(BASE_DIR / 'netup_presales.db').as_posix()}"
+        self.cors_origins = _parse_csv(_clean_env_value(os.getenv("CORS_ORIGINS")), default=DEFAULT_CORS_ORIGINS)
+        self.openai_api_key = _clean_env_value(os.getenv("OPENAI_API_KEY"))
+        self.openai_model = _clean_env_value(os.getenv("OPENAI_MODEL")) or "gpt-5.4-mini"
         self.rate_limit_requests = int(os.getenv("RATE_LIMIT_REQUESTS", "30"))
         self.rate_limit_window_seconds = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
         self.max_message_length = int(os.getenv("MAX_MESSAGE_LENGTH", "2000"))
