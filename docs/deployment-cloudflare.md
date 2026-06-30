@@ -25,8 +25,25 @@
 10. Deploy the Worker.
 11. Obtain the generated `workers.dev` URL, for example `https://netup-presales-configurator.<account>.workers.dev`.
 12. Add that exact URL to the backend `CORS_ORIGINS`.
-13. Redeploy the backend on Render.
-14. Test the full flow:
+13. Set it in the backend host configuration:
+
+- On Render: open the backend service -> `Environment` -> edit `CORS_ORIGINS`
+- Local backend: set `CORS_ORIGINS=` in the root `.env`
+- Blueprint default: `render.yaml` already includes a `CORS_ORIGINS` entry that you should replace
+
+Example:
+
+```text
+CORS_ORIGINS=https://netup-ai-presales-configurator.pantarslan.workers.dev
+```
+
+For multiple allowed frontend origins, use a comma-separated list:
+
+```text
+CORS_ORIGINS=https://netup-ai-presales-configurator.pantarslan.workers.dev,https://configurator.example.com
+```
+14. Redeploy the backend on Render.
+15. Test the full flow:
 
 - Home page loads
 - Guided configurator works
@@ -35,12 +52,12 @@
 - Lead saving works
 - Report generation and download work
 
-15. Add a custom domain when ready.
-16. Update backend `CORS_ORIGINS` to `https://configurator.example.com`.
-17. Redeploy the backend again.
-18. Re-test over HTTPS on the custom domain.
-19. Configure Cloudflare Access for staging or reviewer-only deployments when needed.
-20. Configure Cloudflare Turnstile for public forms when you are ready to enforce bot protection.
+16. Add a custom domain when ready.
+17. Update backend `CORS_ORIGINS` to `https://configurator.example.com`.
+18. Redeploy the backend again.
+19. Re-test over HTTPS on the custom domain.
+20. Configure Cloudflare Access for staging or reviewer-only deployments when needed.
+21. Configure Cloudflare Turnstile for public forms when you are ready to enforce bot protection.
 
 ## Local OpenNext Commands
 
