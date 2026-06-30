@@ -125,6 +125,15 @@ export type Recommendation = {
 
 export type ExtractResponse = {
   extracted_requirements: Record<string, unknown>;
+  extraction_trace: {
+    field: string;
+    value: unknown;
+    source_text?: string | null;
+    confidence: "high" | "medium" | "low";
+    state: "explicit" | "inferred" | "carried_forward" | "missing";
+    requires_confirmation: boolean;
+    reasoning?: string | null;
+  }[];
   missing_required_fields: string[];
   next_question: string | null;
   ready_for_recommendation: boolean;

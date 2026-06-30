@@ -59,6 +59,7 @@ def test_conversation_extract_reports_not_configured_when_api_key_missing(client
     body = response.json()
     assert body["ai_available"] is False
     assert body["extraction_succeeded"] is False
+    assert body["extraction_trace"] == []
     assert body["error_code"] == "ai_not_configured"
     assert body["message"] == "Natural-language intake is currently unavailable because the AI service is not configured."
     assert body["next_question"] is None

@@ -2,7 +2,7 @@ import asyncio
 import os
 from contextlib import contextmanager
 
-from app.schemas import AIExtractedRequirements, AIExtractionPayload, PartialCustomerRequirements
+from app.schemas import AIExtractedRequirements, AIExtractionPayload, ExtractionFieldTrace, PartialCustomerRequirements
 from app.services.ai_extractor import ConversationExtractor
 from app.settings import get_settings
 
@@ -68,6 +68,14 @@ def test_extracts_expected_requirements_from_example_message():
                     viewer_devices=["smart_tv", "mobile"],
                 ),
                 next_question="What type of project is this?",
+                field_traces=[
+                    ExtractionFieldTrace(field="project_type", source_text="180-room hotel", confidence="high", state="explicit"),
+                    ExtractionFieldTrace(field="subscribers_or_rooms", source_text="180-room hotel", confidence="high", state="explicit"),
+                    ExtractionFieldTrace(field="number_of_channels", source_text="85 satellite and IP channels", confidence="high", state="explicit"),
+                    ExtractionFieldTrace(field="signal_sources", source_text="satellite and IP channels", confidence="medium", state="explicit"),
+                    ExtractionFieldTrace(field="services", source_text="catch-up TV", confidence="high", state="explicit"),
+                    ExtractionFieldTrace(field="viewer_devices", source_text="LG Smart TVs and mobile viewing", confidence="high", state="explicit"),
+                ],
             )
         )
         extractor.client = fake_client
@@ -84,6 +92,9 @@ def test_extracts_expected_requirements_from_example_message():
         assert "catchup_tv" in result.extracted_requirements.services
         assert "smart_tv" in result.extracted_requirements.viewer_devices
         assert "mobile" in result.extracted_requirements.viewer_devices
+        assert any(item.field == "project_type" and item.source_text == "180-room hotel" for item in result.extraction_trace)
+        assert any(item.field == "live_tv" and item.state == "inferred" for item in result.extraction_trace)
+        assert any(item.field == "epg" and item.state == "inferred" for item in result.extraction_trace)
         assert result.next_question == "What TV model or series will be installed in the hotel rooms?"
         assert "project type" not in (result.next_question or "").lower()
         assert fake_client.responses.calls[0]["model"] == "gpt-5.4-mini"
@@ -98,7 +109,11 @@ def test_merges_with_existing_requirements_without_overwriting_known_values():
                     project_type="hotel",
                     signal_sources=["satellite", "ip_streams"],
                     viewer_devices=["smart_tv", "mobile"],
-                )
+                ),
+                field_traces=[
+                    ExtractionFieldTrace(field="signal_sources", source_text="satellite and IP channels", confidence="medium", state="explicit"),
+                    ExtractionFieldTrace(field="viewer_devices", source_text="LG Smart TVs and mobile viewing", confidence="high", state="explicit"),
+                ],
             )
         )
         extractor.client = fake_client
@@ -115,3 +130,4 @@ def test_merges_with_existing_requirements_without_overwriting_known_values():
         assert result.extracted_requirements.subscribers_or_rooms == 180
         assert result.extracted_requirements.signal_sources == ["satellite", "ip_streams"]
         assert result.extracted_requirements.viewer_devices == ["smart_tv", "mobile"]
+        assert any(item.field == "subscribers_or_rooms" and item.state == "carried_forward" for item in result.extraction_trace)

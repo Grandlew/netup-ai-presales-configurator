@@ -102,6 +102,8 @@ type InferenceItem = {
   key: InferenceKey;
   label: string;
   reason: string;
+  sourceText?: string | null;
+  confidence?: "high" | "medium" | "low";
 };
 
 type FollowUpItem = {
@@ -277,6 +279,26 @@ function buildTrace(values: ReviewValues, originalMessage: string, inferenceDeci
   return trace;
 }
 
+function buildTraceFromBackend(
+  values: ReviewValues,
+  backendTrace: ExtractResponse["extraction_trace"],
+  inferenceDecisions: Record<InferenceKey, InferenceDecision>,
+) {
+  return backendTrace.map((entry) => ({
+    field: entry.field,
+    value: entry.value,
+    status:
+      entry.state === "inferred"
+        ? "inferred_requires_confirmation"
+        : entry.state === "missing"
+          ? "missing_required"
+          : "confirmed_from_text",
+    source_phrase: entry.source_text ?? null,
+    user_confirmed_value: inferenceDecisions[entry.field as InferenceKey] === "accepted" ? values[entry.field] : undefined,
+    user_edited_value: values[entry.field] ?? entry.value,
+  })) satisfies TraceEntry[];
+}
+
 function determineGenericDelivery(values: ReviewValues) {
   const mobileScope = String(values.mobile_viewing_scope ?? "");
   if (mobileScope === "both" || mobileScope === "off_property_access") return "both";
@@ -355,8 +377,23 @@ export function ConversationReview({
   const catchupSelected = selectedServices.includes("catchup_tv");
   const liveTvSelected = selectedServices.includes("live_tv");
   const epgSelected = selectedServices.includes("epg");
+  const backendTrace = response.extraction_trace ?? [];
 
   const inferenceItems = useMemo(() => {
+    if (backendTrace.length) {
+      return backendTrace
+        .filter((entry): entry is ExtractResponse["extraction_trace"][number] & { field: InferenceKey } => (
+          entry.state === "inferred" && (entry.field === "live_tv" || entry.field === "epg")
+        ))
+        .map((entry) => ({
+          key: entry.field,
+          label: inferredServiceLabel(entry.field),
+          reason: entry.reasoning ?? "This item needs explicit confirmation before it is treated as customer-confirmed.",
+          sourceText: entry.source_text,
+          confidence: entry.confidence,
+        }));
+    }
+
     const items: InferenceItem[] = [];
 
     if (Number(formValues.number_of_channels ?? 0) > 0 && !liveTvSelected) {
@@ -376,7 +413,7 @@ export function ConversationReview({
     }
 
     return items;
-  }, [catchupSelected, epgSelected, formValues.number_of_channels, liveTvSelected]);
+  }, [backendTrace, catchupSelected, epgSelected, formValues.number_of_channels, liveTvSelected]);
 
   useEffect(() => {
     setInferenceDecisions((current) => {
@@ -394,12 +431,31 @@ export function ConversationReview({
   }, [inferenceItems]);
 
   useEffect(() => {
-    setReviewAuditTrace(buildTrace(formValues, originalMessage, inferenceDecisions));
-  }, [formValues, inferenceDecisions, originalMessage]);
+    setReviewAuditTrace(
+      backendTrace.length
+        ? buildTraceFromBackend(formValues, backendTrace, inferenceDecisions)
+        : buildTrace(formValues, originalMessage, inferenceDecisions),
+    );
+  }, [backendTrace, formValues, inferenceDecisions, originalMessage]);
 
   const confirmedSummary = useMemo(
-    () =>
-      (
+    () => {
+      if (backendTrace.length) {
+        return backendTrace
+          .filter((entry) => entry.state === "explicit" || entry.state === "carried_forward")
+          .filter((entry) => !["live_tv", "epg"].includes(entry.field))
+          .filter((entry) => entry.field !== "hotel_tv_brand" || hotelSmartTvFlow)
+          .filter((entry) => hasValue(entry.value))
+          .map((entry) => ({
+            field: entry.field,
+            value: entry.field === "services" && Array.isArray(entry.value) ? entry.value.filter((service) => service !== "live_tv" && service !== "epg") : entry.value,
+            sourceText: entry.source_text,
+            state: entry.state,
+          }))
+          .filter((entry) => hasValue(entry.value));
+      }
+
+      return (
         [
           ["project_type", formValues.project_type],
           ["subscribers_or_rooms", formValues.subscribers_or_rooms],
@@ -409,8 +465,11 @@ export function ConversationReview({
           ["viewer_devices", selectedDevices],
           ["hotel_tv_brand", hotelSmartTvFlow ? formValues.hotel_tv_brand : ""],
         ] as Array<[string, unknown]>
-      ).filter(([, value]) => hasValue(value)),
-    [formValues, hotelSmartTvFlow, selectedDevices, selectedServices, selectedSources],
+      )
+        .filter(([, value]) => hasValue(value))
+        .map(([field, value]) => ({ field, value, sourceText: deriveSourcePhrase(field, originalMessage), state: "explicit" as const }));
+    },
+    [backendTrace, formValues, hotelSmartTvFlow, originalMessage, selectedDevices, selectedServices, selectedSources],
   );
 
   const followUpItems = useMemo(() => {
@@ -627,25 +686,28 @@ export function ConversationReview({
         </div>
 
         <dl className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {confirmedSummary.map(([field, value]) => (
-            <div key={field} className="rounded-3xl border border-slate-200 bg-white px-5 py-4">
+          {confirmedSummary.map((entry) => (
+            <div key={entry.field} className="rounded-3xl border border-slate-200 bg-white px-5 py-4">
               <dt className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <span>{humanize(field)}</span>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] tracking-[0.14em] text-emerald-700">Confirmed</span>
+                <span>{humanize(entry.field)}</span>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] tracking-[0.14em] text-emerald-700">
+                  {entry.state === "carried_forward" ? "Previously confirmed" : "Confirmed"}
+                </span>
               </dt>
               <dd className="mt-2 text-base text-ink">
-                {Array.isArray(value) ? (
+                {Array.isArray(entry.value) ? (
                   <div className="flex flex-wrap gap-2">
-                    {value.map((item) => (
+                    {entry.value.map((item) => (
                       <span key={item} className="rounded-full border border-slate-200 bg-paper px-3 py-1 text-sm text-ink">
-                        {getOptionLabel(options, field, String(item))}
+                        {getOptionLabel(options, entry.field, String(item))}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  formatValue(value)
+                  formatValue(entry.value)
                 )}
               </dd>
+              {entry.sourceText ? <p className="mt-2 text-xs text-slate-500">Source: "{entry.sourceText}"</p> : null}
             </div>
           ))}
         </dl>
@@ -668,6 +730,8 @@ export function ConversationReview({
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-600">{item.reason}</p>
+                    {item.confidence ? <p className="mt-2 text-xs text-slate-500">Confidence: {item.confidence}</p> : null}
+                    {item.sourceText ? <p className="mt-2 text-xs text-slate-500">Source: "{item.sourceText}"</p> : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <ToggleButton label="Accept" pressed={inferenceDecisions[item.key] === "accepted"} onClick={() => toggleInference(item, "accepted")} />

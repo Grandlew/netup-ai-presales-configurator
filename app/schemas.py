@@ -89,6 +89,19 @@ class ClaimStatus(str, Enum):
     PROVISIONAL = "provisional"
 
 
+class ExtractionConfidence(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class ExtractionFieldState(str, Enum):
+    EXPLICIT = "explicit"
+    INFERRED = "inferred"
+    CARRIED_FORWARD = "carried_forward"
+    MISSING = "missing"
+
+
 class CustomerRequirements(BaseModel):
     project_type: ProjectType
     country: str | None = None
@@ -265,6 +278,17 @@ class AIExtractedRequirements(BaseModel):
 class AIExtractionPayload(BaseModel):
     extracted_requirements: AIExtractedRequirements
     next_question: str | None = None
+    field_traces: list["ExtractionFieldTrace"] = Field(default_factory=list)
+
+
+class ExtractionFieldTrace(BaseModel):
+    field: str
+    value: Any = None
+    source_text: str | None = None
+    confidence: ExtractionConfidence = ExtractionConfidence.MEDIUM
+    state: ExtractionFieldState = ExtractionFieldState.EXPLICIT
+    requires_confirmation: bool = False
+    reasoning: str | None = None
 
 
 class ProductRecommendation(BaseModel):
@@ -405,6 +429,7 @@ class ConversationExtractRequest(BaseModel):
 
 class ConversationExtractResponse(BaseModel):
     extracted_requirements: PartialCustomerRequirements
+    extraction_trace: list[ExtractionFieldTrace] = Field(default_factory=list)
     missing_required_fields: list[str]
     next_question: str | None
     ready_for_recommendation: bool

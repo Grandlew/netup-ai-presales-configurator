@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -11,6 +12,9 @@ from app.schemas import (
     AIExtractionPayload,
     ConversationExtractResponse,
     DeliveryMode,
+    ExtractionConfidence,
+    ExtractionFieldState,
+    ExtractionFieldTrace,
     OutputType,
     PartialCustomerRequirements,
     ProjectType,
@@ -47,6 +51,57 @@ except ModuleNotFoundError:  # pragma: no cover - exercised in runtime environme
 
 logger = logging.getLogger(__name__)
 
+TRACEABLE_FIELDS = (
+    "project_type",
+    "country",
+    "company_name",
+    "subscribers_or_rooms",
+    "expected_concurrent_viewers",
+    "number_of_channels",
+    "signal_sources",
+    "services",
+    "viewer_devices",
+    "delivery_mode",
+    "output_type",
+    "adaptive_bitrate_required",
+    "redundancy_required",
+    "available_storage_tb",
+    "archive_days",
+    "average_channel_bitrate_mbps",
+    "estimated_vod_library_size_tb",
+    "need_subscriber_packages",
+    "need_local_advertising",
+    "existing_network_bandwidth_mbps",
+    "existing_equipment",
+    "budget_range",
+    "target_launch_date",
+    "hotel_tv_brand",
+    "hotel_tv_model",
+    "hotel_tv_hospitality_grade",
+    "hotel_tv_os",
+    "lg_procentric_direct_confirmed",
+    "mobile_viewing_scope",
+    "in_property_network_type",
+    "pms_integration_required",
+    "channels_to_record",
+    "content_protection_required",
+    "contact_name",
+    "company",
+    "email",
+    "phone",
+    "additional_project_notes",
+)
+
+REQUIRED_FIELD_LABELS = {
+    "project_type": "Project type",
+    "subscribers_or_rooms": "Number of subscribers, rooms, or endpoints",
+    "number_of_channels": "Number of TV channels",
+    "signal_sources": "Signal sources",
+    "services": "Required services",
+    "viewer_devices": "Viewer devices",
+    "delivery_mode": "Delivery mode",
+}
+
 
 SYSTEM_PROMPT = """
 Extract only customer requirements that are explicitly stated for the NetUP presales configurator.
@@ -58,6 +113,8 @@ Rules:
 - Do not recommend products.
 - Do not calculate bandwidth, storage, or architecture.
 - Capture only the supported requirement fields.
+- Return field traces only for fields that are explicitly stated or cautiously inferred from the customer message.
+- Use "explicit" when the customer directly stated the field, and "inferred" only when the wording strongly implies it.
 - Generate at most one concise follow-up question when more required information is needed.
 """.strip()
 
@@ -86,6 +143,7 @@ class ConversationExtractor:
         self,
         *,
         current: PartialCustomerRequirements,
+        extraction_trace: list[ExtractionFieldTrace] | None = None,
         ai_available: bool,
         extraction_succeeded: bool,
         error_code: str | None = None,
@@ -95,6 +153,7 @@ class ConversationExtractor:
         next_question = next_question_for(current) if extraction_succeeded else None
         return ConversationExtractResponse(
             extracted_requirements=current,
+            extraction_trace=extraction_trace or [],
             missing_required_fields=missing,
             next_question=next_question,
             ready_for_recommendation=extraction_succeeded and not missing,
@@ -151,6 +210,7 @@ class ConversationExtractor:
     ) -> ConversationExtractResponse:
         return self._response(
             current=current,
+            extraction_trace=[],
             ai_available=ai_available,
             extraction_succeeded=False,
             error_code=error_code,
@@ -251,8 +311,24 @@ class ConversationExtractor:
                     "required": list(extracted_properties.keys()),
                 },
                 "next_question": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                "field_traces": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "field": {"type": "string", "enum": list(TRACEABLE_FIELDS)},
+                            "source_text": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                            "confidence": {"type": "string", "enum": [member.value for member in ExtractionConfidence]},
+                            "state": {"type": "string", "enum": ["explicit", "inferred"]},
+                            "requires_confirmation": {"type": "boolean"},
+                            "reasoning": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                        },
+                        "required": ["field", "source_text", "confidence", "state", "requires_confirmation", "reasoning"],
+                    },
+                },
             },
-            "required": ["extracted_requirements", "next_question"],
+            "required": ["extracted_requirements", "next_question", "field_traces"],
         }
         return {
             "type": "json_schema",
@@ -260,6 +336,111 @@ class ConversationExtractor:
             "strict": True,
             "schema": normalized_schema,
         }
+
+    def _extract_source_phrase(self, field: str, message: str) -> str | None:
+        patterns: dict[str, str] = {
+            "project_type": r"\b\d+-room hotel\b|\bhotel\b",
+            "subscribers_or_rooms": r"\b\d+-room hotel\b|\b\d+\s+rooms?\b",
+            "number_of_channels": r"\b\d+\s+(satellite\s+and\s+ip\s+)?channels\b",
+            "signal_sources": r"satellite|terrestrial|cable|ip streams?|asi|hdmi|sdi",
+            "viewer_devices": r"smart tvs?|mobile viewing|mobile|set-top boxes?|web browsers?",
+            "hotel_tv_brand": r"\b(LG|Samsung|Philips|Sony)\b",
+            "services": r"catch-?up tv|time-?shift|video on demand|vod|billing|advertising|live tv|epg",
+        }
+        pattern = patterns.get(field)
+        if not pattern:
+            return None
+        match = re.search(pattern, message, flags=re.IGNORECASE)
+        return match.group(0) if match else None
+
+    def _build_extraction_trace(
+        self,
+        *,
+        current: PartialCustomerRequirements,
+        merged: PartialCustomerRequirements,
+        ai_trace: list[ExtractionFieldTrace],
+        message: str,
+    ) -> list[ExtractionFieldTrace]:
+        merged_data = merged.model_dump(mode="json")
+        current_data = current.model_dump(mode="json")
+        trace_by_field = {entry.field: entry for entry in ai_trace}
+        result: list[ExtractionFieldTrace] = []
+
+        for field_name in TRACEABLE_FIELDS:
+            merged_value = merged_data.get(field_name)
+            if merged_value in (None, "", [], {}):
+                continue
+
+            existing = trace_by_field.get(field_name)
+            if existing is not None:
+                result.append(
+                    ExtractionFieldTrace(
+                        field=field_name,
+                        value=merged_value,
+                        source_text=existing.source_text or self._extract_source_phrase(field_name, message),
+                        confidence=existing.confidence,
+                        state=existing.state,
+                        requires_confirmation=existing.requires_confirmation,
+                        reasoning=existing.reasoning,
+                    )
+                )
+                continue
+
+            previous_value = current_data.get(field_name)
+            if previous_value not in (None, "", [], {}):
+                result.append(
+                    ExtractionFieldTrace(
+                        field=field_name,
+                        value=merged_value,
+                        source_text=None,
+                        confidence=ExtractionConfidence.HIGH,
+                        state=ExtractionFieldState.CARRIED_FORWARD,
+                        requires_confirmation=False,
+                        reasoning="Preserved from previously confirmed intake context.",
+                    )
+                )
+
+        services = set(merged_data.get("services") or [])
+        if merged_data.get("number_of_channels") and "live_tv" not in services:
+            result.append(
+                ExtractionFieldTrace(
+                    field="live_tv",
+                    value="live_tv",
+                    source_text=self._extract_source_phrase("number_of_channels", message),
+                    confidence=ExtractionConfidence.MEDIUM,
+                    state=ExtractionFieldState.INFERRED,
+                    requires_confirmation=True,
+                    reasoning="Channel count strongly suggests linear TV delivery, but the service was not stated explicitly.",
+                )
+            )
+        if "catchup_tv" in services and "epg" not in services:
+            result.append(
+                ExtractionFieldTrace(
+                    field="epg",
+                    value="epg",
+                    source_text=self._extract_source_phrase("services", message),
+                    confidence=ExtractionConfidence.MEDIUM,
+                    state=ExtractionFieldState.INFERRED,
+                    requires_confirmation=True,
+                    reasoning="Catch-up TV usually depends on EPG data for programme navigation.",
+                )
+            )
+
+        for field_name, label in REQUIRED_FIELD_LABELS.items():
+            if merged_data.get(field_name) in (None, "", [], {}):
+                result.append(
+                    ExtractionFieldTrace(
+                        field=field_name,
+                        value=None,
+                        source_text=None,
+                        confidence=ExtractionConfidence.LOW,
+                        state=ExtractionFieldState.MISSING,
+                        requires_confirmation=True,
+                        reasoning=f"{label} is still missing from the intake.",
+                    )
+                )
+
+        return result
 
     async def extract(self, message: str, current: PartialCustomerRequirements | None) -> ConversationExtractResponse:
         if len(message) > self.settings.max_message_length:
@@ -331,6 +512,12 @@ class ConversationExtractor:
                 parsed_payload.extracted_requirements.model_dump(mode="json")
             )
             merged = self._merge_requirements(current, extracted)
+            extraction_trace = self._build_extraction_trace(
+                current=current,
+                merged=merged,
+                ai_trace=parsed_payload.field_traces,
+                message=message,
+            )
         except AuthenticationError as exc:
             self._log_openai_failure(exc, message=message, current=current, error_code="openai_authentication_failed")
             return self._error_response(
@@ -420,6 +607,7 @@ class ConversationExtractor:
 
         return self._response(
             current=merged,
+            extraction_trace=extraction_trace,
             ai_available=True,
             extraction_succeeded=True,
         )

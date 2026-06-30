@@ -13,7 +13,7 @@ import { Wizard } from "@/components/wizard";
 import type { WizardFormValues } from "@/lib/schema";
 import { api } from "@/lib/api";
 import { consumeHomeNavigationIntent, getResultsPayload, getReviewPayload, setResultsPayload, setReviewPayload } from "@/lib/flow-storage";
-import type { ConfigOptionsResponse, Recommendation } from "@/lib/types";
+import type { ConfigOptionsResponse, ExtractResponse, Recommendation } from "@/lib/types";
 
 const routerPush = vi.fn();
 
@@ -191,6 +191,36 @@ const submittedValues: WizardFormValues = {
   consent_given: true,
 };
 
+const conversationTrace: ExtractResponse["extraction_trace"] = [
+  { field: "project_type", value: "hotel", source_text: "hotel", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "subscribers_or_rooms", value: 180, source_text: "180-room hotel", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "number_of_channels", value: 85, source_text: "85 satellite and IP channels", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "signal_sources", value: ["satellite", "ip_streams"], source_text: "satellite and IP channels", confidence: "medium", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "services", value: ["catchup_tv"], source_text: "catch-up TV", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "viewer_devices", value: ["smart_tv", "mobile"], source_text: "LG Smart TVs and mobile viewing", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+  { field: "live_tv", value: "live_tv", source_text: "85 satellite and IP channels", confidence: "medium", state: "inferred", requires_confirmation: true, reasoning: "Channel count strongly suggests linear TV delivery, but the service was not stated explicitly." },
+  { field: "epg", value: "epg", source_text: "catch-up TV", confidence: "medium", state: "inferred", requires_confirmation: true, reasoning: "Catch-up TV usually depends on EPG data for programme navigation." },
+];
+
+const reviewExtractResponse: ExtractResponse = {
+  extracted_requirements: {
+    project_type: "hotel",
+    subscribers_or_rooms: 180,
+    number_of_channels: 85,
+    signal_sources: ["satellite", "ip_streams"],
+    services: ["catchup_tv"],
+    viewer_devices: ["smart_tv", "mobile"],
+  },
+  extraction_trace: conversationTrace,
+  missing_required_fields: ["Delivery mode"],
+  next_question: "What TV model or series will be installed in the hotel rooms?",
+  ready_for_recommendation: false,
+  ai_available: true,
+  extraction_succeeded: true,
+  error_code: null,
+  message: null,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.sessionStorage.clear();
@@ -204,6 +234,11 @@ beforeEach(() => {
       project_type: "hotel",
       subscribers_or_rooms: 180,
     },
+    extraction_trace: [
+      { field: "project_type", value: "hotel", source_text: "hotel", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+      { field: "subscribers_or_rooms", value: 180, source_text: "180-room hotel", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+      { field: "number_of_channels", value: null, source_text: null, confidence: "low", state: "missing", requires_confirmation: true, reasoning: "Number of TV channels is still missing from the intake." },
+    ],
     missing_required_fields: ["Number of channels"],
     next_question: "How many TV channels do you expect to distribute?",
     ready_for_recommendation: false,
@@ -446,6 +481,7 @@ describe("ConversationPanel", () => {
     const onUseGuidedConfigurator = vi.fn();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
+      extraction_trace: [],
       missing_required_fields: [],
       next_question: null,
       ready_for_recommendation: false,
@@ -477,6 +513,7 @@ describe("ConversationPanel", () => {
     const onExtractionSuccess = vi.fn();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
+      extraction_trace: [],
       missing_required_fields: [],
       next_question: null,
       ready_for_recommendation: false,
@@ -494,6 +531,11 @@ describe("ConversationPanel", () => {
         signal_sources: ["ip_streams"],
         services: ["catchup_tv"],
       },
+      extraction_trace: [
+        { field: "project_type", value: "hotel", source_text: "hotel", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+        { field: "signal_sources", value: ["ip_streams"], source_text: "IP", confidence: "medium", state: "explicit", requires_confirmation: false, reasoning: null },
+        { field: "services", value: ["catchup_tv"], source_text: "catch-up TV", confidence: "high", state: "explicit", requires_confirmation: false, reasoning: null },
+      ],
       missing_required_fields: ["Rooms or subscribers"],
       next_question: "How many subscribers, rooms, screens, or endpoints do you plan to serve?",
       ready_for_recommendation: false,
@@ -523,6 +565,7 @@ describe("ConversationPanel", () => {
     const user = userEvent.setup();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
+      extraction_trace: [],
       missing_required_fields: [],
       next_question: null,
       ready_for_recommendation: false,
@@ -549,6 +592,7 @@ describe("ConversationPanel", () => {
     const user = userEvent.setup();
     vi.mocked(api.extract).mockResolvedValueOnce({
       extracted_requirements: {},
+      extraction_trace: [],
       missing_required_fields: [],
       next_question: null,
       ready_for_recommendation: false,
@@ -859,14 +903,8 @@ describe("HomePage layout", () => {
   it("routes extracted results to the separate review page", async () => {
     const user = userEvent.setup();
     vi.mocked(api.extract).mockResolvedValueOnce({
-      extracted_requirements: {
-        project_type: "hotel",
-        subscribers_or_rooms: 180,
-        number_of_channels: 85,
-        signal_sources: ["satellite", "ip_streams"],
-        services: ["catchup_tv"],
-        viewer_devices: ["smart_tv", "mobile"],
-      },
+      extracted_requirements: reviewExtractResponse.extracted_requirements,
+      extraction_trace: conversationTrace,
       missing_required_fields: ["Delivery mode"],
       next_question: "Will delivery stay on a local network, go over OTT/internet, or both?",
       ready_for_recommendation: false,
@@ -895,21 +933,7 @@ describe("HomePage layout", () => {
     const user = userEvent.setup();
     setReviewPayload({
       response: {
-        extracted_requirements: {
-          project_type: "hotel",
-          subscribers_or_rooms: 180,
-          number_of_channels: 85,
-          signal_sources: ["satellite", "ip_streams"],
-          services: ["catchup_tv"],
-          viewer_devices: ["smart_tv", "mobile"],
-        },
-        missing_required_fields: ["Delivery mode"],
-        next_question: "What TV model or series will be installed in the hotel rooms?",
-        ready_for_recommendation: false,
-        ai_available: true,
-        extraction_succeeded: true,
-        error_code: null,
-        message: null,
+        ...reviewExtractResponse,
       },
       originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
@@ -939,21 +963,7 @@ describe("HomePage layout", () => {
     const user = userEvent.setup();
     setReviewPayload({
       response: {
-        extracted_requirements: {
-          project_type: "hotel",
-          subscribers_or_rooms: 180,
-          number_of_channels: 85,
-          signal_sources: ["satellite", "ip_streams"],
-          services: ["catchup_tv"],
-          viewer_devices: ["smart_tv", "mobile"],
-        },
-        missing_required_fields: ["Delivery mode"],
-        next_question: "What TV model or series will be installed in the hotel rooms?",
-        ready_for_recommendation: false,
-        ai_available: true,
-        extraction_succeeded: true,
-        error_code: null,
-        message: null,
+        ...reviewExtractResponse,
       },
       originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
@@ -974,21 +984,7 @@ describe("HomePage layout", () => {
     const user = userEvent.setup();
     setReviewPayload({
       response: {
-        extracted_requirements: {
-          project_type: "hotel",
-          subscribers_or_rooms: 180,
-          number_of_channels: 85,
-          signal_sources: ["satellite", "ip_streams"],
-          services: ["catchup_tv"],
-          viewer_devices: ["smart_tv", "mobile"],
-        },
-        missing_required_fields: ["Delivery mode"],
-        next_question: "What TV model or series will be installed in the hotel rooms?",
-        ready_for_recommendation: false,
-        ai_available: true,
-        extraction_succeeded: true,
-        error_code: null,
-        message: null,
+        ...reviewExtractResponse,
       },
       originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
@@ -1006,21 +1002,7 @@ describe("HomePage layout", () => {
     const user = userEvent.setup();
     setReviewPayload({
       response: {
-        extracted_requirements: {
-          project_type: "hotel",
-          subscribers_or_rooms: 180,
-          number_of_channels: 85,
-          signal_sources: ["satellite", "ip_streams"],
-          services: ["catchup_tv"],
-          viewer_devices: ["smart_tv", "mobile"],
-        },
-        missing_required_fields: ["Delivery mode"],
-        next_question: "What TV model or series will be installed in the hotel rooms?",
-        ready_for_recommendation: false,
-        ai_available: true,
-        extraction_succeeded: true,
-        error_code: null,
-        message: null,
+        ...reviewExtractResponse,
       },
       originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
@@ -1047,21 +1029,7 @@ describe("HomePage layout", () => {
   it("keeps optional advanced details collapsed by default", async () => {
     setReviewPayload({
       response: {
-        extracted_requirements: {
-          project_type: "hotel",
-          subscribers_or_rooms: 180,
-          number_of_channels: 85,
-          signal_sources: ["satellite", "ip_streams"],
-          services: ["catchup_tv"],
-          viewer_devices: ["smart_tv", "mobile"],
-        },
-        missing_required_fields: ["Delivery mode"],
-        next_question: "What TV model or series will be installed in the hotel rooms?",
-        ready_for_recommendation: false,
-        ai_available: true,
-        extraction_succeeded: true,
-        error_code: null,
-        message: null,
+        ...reviewExtractResponse,
       },
       originalMessage: "We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs. Plus catch-up TV and mobile viewing.",
     });
