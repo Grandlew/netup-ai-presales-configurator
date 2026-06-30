@@ -1,6 +1,32 @@
 import type { ConfigOptionsResponse, ExtractResponse, Recommendation } from "@/lib/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+function normalizeBaseUrl(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function resolveApiBaseUrl() {
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+  if (configuredBaseUrl) {
+    return normalizeBaseUrl(configuredBaseUrl);
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return "http://127.0.0.1:8000";
+  }
+
+  console.warn(
+    "NEXT_PUBLIC_API_BASE_URL is not set for this production build. API requests will use the current origin until the variable is configured.",
+  );
+  return "";
+}
+
+function buildUrl(path: string) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE}${normalizedPath}`;
+}
+
+const API_BASE = resolveApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -15,7 +41,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(buildUrl(path), {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -42,10 +68,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
     const code = typeof error.error_code === "string" ? error.error_code : null;
 
-    console.error(
-      `API request failed\nPath: ${path}\nStatus: ${response.status}\nCode: ${code ?? "none"}\nResponse: ${JSON.stringify(error, null, 2)}`,
-    );
-
     throw new ApiError(detail || `Request failed with status ${response.status}`, response.status, code);
   }
 
@@ -53,7 +75,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(buildUrl(path), {
     ...init,
     headers: {
       ...(init?.headers ?? {}),
@@ -114,7 +136,7 @@ function normalizeRecommendBody(body: Record<string, unknown>) {
 export const api = {
   options: () => request<ConfigOptionsResponse>("/api/config/options"),
   recommend: (body: Record<string, unknown>) =>
-    request<Recommendation>("/recommend", { method: "POST", body: JSON.stringify(normalizeRecommendBody(body)) }),
+    request<Recommendation>("/api/recommend", { method: "POST", body: JSON.stringify(normalizeRecommendBody(body)) }),
   extract: (body: Record<string, unknown>) =>
     request<ExtractResponse>("/api/conversation/extract", { method: "POST", body: JSON.stringify(body) }),
   createLead: (body: Record<string, unknown>) =>

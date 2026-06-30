@@ -328,10 +328,12 @@ export function ConversationReview({
   const [formValues, setFormValues] = useState<ReviewValues>(() => createInitialValues(response.extracted_requirements ?? {}, originalMessage));
   const [inferenceDecisions, setInferenceDecisions] = useState<Record<InferenceKey, InferenceDecision>>({ live_tv: null, epg: null });
   const [recordAllChannels, setRecordAllChannels] = useState<boolean | null>(null);
+  const [advancedDetailsOpen, setAdvancedDetailsOpen] = useState(false);
 
   useEffect(() => {
     setFormValues(createInitialValues(response.extracted_requirements ?? {}, originalMessage));
     setInferenceDecisions({ live_tv: null, epg: null });
+    setAdvancedDetailsOpen(false);
   }, [response, originalMessage]);
 
   useEffect(() => {
@@ -815,13 +817,16 @@ export function ConversationReview({
       </section>
 
       <section className="panel p-6 md:p-7">
-        <details>
-          <summary className="cursor-pointer list-none text-lg font-semibold text-ink">
-            <span className="inline-flex items-center gap-2">
-              Optional advanced details
-              <span className="rounded-full bg-paper px-3 py-1 text-xs font-medium text-slate-600">Collapsed by default</span>
-            </span>
-          </summary>
+        <button
+          type="button"
+          aria-expanded={advancedDetailsOpen}
+          onClick={() => setAdvancedDetailsOpen((current) => !current)}
+          className="inline-flex items-center gap-2 text-left text-lg font-semibold text-ink"
+        >
+          <span>Optional advanced details</span>
+          <span className="rounded-full bg-paper px-3 py-1 text-xs font-medium text-slate-600">Collapsed by default</span>
+        </button>
+        {advancedDetailsOpen ? (
           <div className="mt-5 space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
               <FieldSelect
@@ -929,7 +934,7 @@ export function ConversationReview({
               onChange={(value) => setFieldValue("additional_project_notes", value)}
             />
           </div>
-        </details>
+        ) : null}
       </section>
 
       <section className="panel p-6 md:p-7">
@@ -1030,17 +1035,28 @@ function FieldInput({
   type?: string;
   helperText?: string;
 }) {
+  const inputId = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const helperId = `${inputId}-helper`;
+
   return (
-    <label className="space-y-2 text-sm text-slate-700">
-      <span className="font-medium text-ink">{label}</span>
+    <div className="space-y-2 text-sm text-slate-700">
+      <label htmlFor={inputId} className="block font-medium text-ink">
+        {label}
+      </label>
       <input
+        id={inputId}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        aria-describedby={helperText ? helperId : undefined}
         className="min-h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-ink outline-none transition focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
       />
-      {helperText ? <span className="block text-xs text-slate-500">{helperText}</span> : null}
-    </label>
+      {helperText ? (
+        <span id={helperId} className="block text-xs text-slate-500">
+          {helperText}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

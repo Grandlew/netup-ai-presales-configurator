@@ -1,16 +1,27 @@
 # NetUP AI Presales Configurator
 
-Production-oriented MVP for structured NetUP IPTV/OTT presales intake. The system combines a deterministic FastAPI recommendation backend with a Next.js customer-facing frontend and an optional OpenAI-powered conversational extraction path.
+Production-oriented MVP for structured NetUP IPTV/OTT presales intake. The backend stays deterministic for recommendation logic, while the frontend can now be deployed to Cloudflare Workers through OpenNext and the FastAPI API can be deployed independently on Render or another Python host.
 
 ## Architecture
 
-- `app/`: FastAPI backend, deterministic rules engine, capacity calculator, AI extraction, persistence, reports
-- `config/product_rules.yaml`: versioned product-family rules that require NetUP validation
-- `frontend/`: Next.js App Router UI for the wizard, conversational intake, results, and report preview
-- `alembic/`: migration scaffold
-- `docs/`: architecture, rule, AI safety, and NetUP validation references
+- `frontend/`: Next.js App Router UI, deployable to Cloudflare Workers with OpenNext
+- `app/`: FastAPI API, deterministic rules engine, AI extraction, persistence, reports
+- `alembic/`: database migrations
+- `config/`: product rules and capabilities
+- `docs/`: deployment and validation guidance
 
-## Local setup
+Target production shape:
+
+```text
+Browser
+  -> Cloudflare-hosted Next.js frontend
+  -> Public FastAPI backend
+     -> OpenAI Responses API
+     -> Managed PostgreSQL
+     -> Report storage in PostgreSQL
+```
+
+## Local Development
 
 ### Backend
 
@@ -20,7 +31,6 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env
 alembic upgrade head
-python -m app.seed
 uvicorn app.main:app --reload
 ```
 
@@ -28,93 +38,115 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-cmd /c npm install
-cmd /c npm run dev
+copy .env.example .env.local
+npm install
+npm run dev
 ```
 
-Backend runs at `http://127.0.0.1:8000`
+Local defaults:
 
-check `http://127.0.0.1:8000/docs`
+- Backend: `http://127.0.0.1:8000`
+- Frontend: `http://127.0.0.1:3000`
 
-Frontend runs at `http://127.0.0.1:3000`
+## Environment Variables
 
-## Environment variables
+Backend variables are documented in `.env.example`.
 
-See `.env.example`.
+Key backend values:
 
-Key values:
+- `APP_ENV`
+- `DATABASE_URL`
+- `CORS_ORIGINS`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `RATE_LIMIT_REQUESTS`
+- `RATE_LIMIT_WINDOW_SECONDS`
+- `MAX_MESSAGE_LENGTH`
+- `BANDWIDTH_OVERHEAD_PERCENT`
+- `BANDWIDTH_SAFETY_MARGIN_PERCENT`
+- `ARCHIVE_OVERHEAD_PERCENT`
+- `ARCHIVE_SAFETY_MARGIN_PERCENT`
+- `ARCHIVE_REDUNDANCY_FACTOR`
+- `ARCHIVE_RECORDING_RATIO`
+- `REPORT_OUTPUT_DIR`
+- `PRODUCT_RULES_PATH`
+- `DATA_RETENTION_NOTE`
 
-- `DATABASE_URL`: SQLite by default, PostgreSQL supported in production
-- `OPENAI_API_KEY`: enables conversational extraction
-- `OPENAI_MODEL`: defaults to `gpt-5.4-mini`
-- `CORS_ORIGINS`: comma-separated frontend origins
-- `NEXT_PUBLIC_API_BASE_URL`: frontend backend URL
+Frontend variables:
 
-## AI-disabled mode
+- `NEXT_PUBLIC_API_BASE_URL`
 
-If `OPENAI_API_KEY` is empty:
+`OPENAI_API_KEY` belongs only on the backend host.
 
-- `/api/conversation/extract` stays available
-- the endpoint returns `ai_available: false`
-- the UI clearly explains that conversational extraction is disabled
-- the guided questionnaire remains fully operational
+## Production Deployment
 
-## Commands
+### Backend
+
+- Render blueprint: `render.yaml`
+- Health endpoint: `/api/health`
+- Migration command: `alembic upgrade head`
+- Production start command:
 
 ```bash
-make install
-make dev
-make test
-make lint
-make migrate
-make seed
-make docker-up
+uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
 ```
 
-On Windows without `make`, run the underlying commands from the `Makefile`.
+### Frontend
 
-## Tests
+- OpenNext config: `frontend/open-next.config.ts`
+- Wrangler config: `frontend/wrangler.jsonc`
+- Cloudflare build:
+
+```bash
+cd frontend
+npm run build:cloudflare
+```
+
+### Step-by-step Docs
+
+- Render: [docs/deployment-render.md](docs/deployment-render.md)
+- Cloudflare: [docs/deployment-cloudflare.md](docs/deployment-cloudflare.md)
+- Production checklist: [docs/production-deployment-checklist.md](docs/production-deployment-checklist.md)
+
+## Public API Endpoints
+
+- `GET /api/health`
+- `POST /api/recommend`
+- `POST /recommend` (legacy compatibility route)
+- `POST /api/conversation/extract`
+- `GET /api/products`
+- `GET /api/config/options`
+- `POST /api/leads`
+- `GET /api/leads/{lead_id}`
+- `POST /api/reports`
+- `GET /api/reports/{report_id}`
+- `GET /api/reports/{report_id}/download?format=pdf|doc`
+
+## Validation Commands
 
 Backend:
 
 ```bash
 pytest -q
+python -m compileall app
+alembic check
 ```
 
 Frontend:
 
 ```bash
 cd frontend
-cmd /c npm test
-cmd /c npm run build
+npm test
+npm run typecheck
+npm run build
+npm run build:cloudflare
 ```
 
-## Docker
+## Security Notes
 
-```bash
-copy .env.example .env
-docker compose up --build
-```
-
-## Example request
-
-```bash
-curl -X POST "http://127.0.0.1:8000/recommend" ^
-  -H "Content-Type: application/json" ^
-  --data @example_request.json
-```
-
-## Known limitations
-
-- Current product thresholds are provisional and require NetUP validation.
-- Report generation currently uses printable HTML rather than system-PDF rendering.
-- Lead and report persistence use SQLite by default locally.
-- Frontend tests cover key flows but are not a browser-driven E2E suite.
-
-## Deployment guidance
-
-- Use PostgreSQL through `DATABASE_URL`
-- keep `OPENAI_API_KEY` server-side only
-- set restrictive `CORS_ORIGINS`
-- review NetUP validation checklist before customer launch
-- place the frontend behind TLS and route API traffic to the FastAPI backend
+- Do not commit `.env`, local DB files, generated reports, `.next`, `.wrangler`, or `node_modules`.
+- Do not expose `OPENAI_API_KEY` to the frontend.
+- Do not use wildcard CORS in production.
+- Reports are persisted in the database so they survive backend restarts.
+- Lead submission requires consent before persistence.
+- Cloudflare Turnstile is documented as the next hardening step; it is not enforced by this pass.

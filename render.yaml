@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: netup-presales-api
+    env: python
+    rootDir: .
+    autoDeploy: true
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: CORS_ORIGINS
+        value: https://configurator.example.com
+      - key: RATE_LIMIT_REQUESTS
+        value: "30"
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
+      - key: MAX_MESSAGE_LENGTH
+        value: "2000"
+      - key: REPORT_OUTPUT_DIR
+        value: generated_reports
+      - key: DATA_RETENTION_NOTE
+        value: Lead data is stored for presales follow-up and must be handled under your applicable privacy policy.
+
+databases:
+  - name: netup-presales-postgres
+    databaseName: netup_presales
+    user: netup_presales

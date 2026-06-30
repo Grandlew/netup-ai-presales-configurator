@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.db.database import get_db
+from app.db.database import ensure_database_connection, get_db
 from app.db.models import Lead, Report
 from app.dependencies import get_extractor
 from app.schemas import (
@@ -29,13 +28,13 @@ from app.services.reports import render_report_doc, render_report_html, render_r
 from app.settings import get_settings
 
 
-api_router = APIRouter()
+api_router = APIRouter(prefix="/api")
+legacy_router = APIRouter()
 settings = get_settings()
 
 
-@api_router.get("/health", response_model=HealthResponse)
-def health(db: Session = Depends(get_db)) -> HealthResponse:
-    db.execute(text("SELECT 1"))
+def _health_response() -> HealthResponse:
+    ensure_database_connection()
     return HealthResponse(
         status="ok",
         database="ok",
@@ -43,12 +42,27 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
     )
 
 
+@api_router.get("/health", response_model=HealthResponse)
+def api_health(_: Session = Depends(get_db)) -> HealthResponse:
+    return _health_response()
+
+
+@legacy_router.get("/health", response_model=HealthResponse, include_in_schema=False)
+def legacy_health(_: Session = Depends(get_db)) -> HealthResponse:
+    return _health_response()
+
+
 @api_router.post("/recommend", response_model=RecommendationResponse)
 def create_recommendation(requirements: CustomerRequirements) -> RecommendationResponse:
     return recommend(requirements)
 
 
-@api_router.post("/api/conversation/extract", response_model=ConversationExtractResponse)
+@legacy_router.post("/recommend", response_model=RecommendationResponse, include_in_schema=False)
+def create_recommendation_legacy(requirements: CustomerRequirements) -> RecommendationResponse:
+    return recommend(requirements)
+
+
+@api_router.post("/conversation/extract", response_model=ConversationExtractResponse)
 async def conversation_extract(
     payload: ConversationExtractRequest,
     extractor: ConversationExtractor = Depends(get_extractor),
@@ -59,17 +73,17 @@ async def conversation_extract(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@api_router.get("/api/products", response_model=list[ProductCatalogItem])
+@api_router.get("/products", response_model=list[ProductCatalogItem])
 def products() -> list[ProductCatalogItem]:
     return get_products()
 
 
-@api_router.get("/api/config/options", response_model=ConfigOptionsResponse)
+@api_router.get("/config/options", response_model=ConfigOptionsResponse)
 def config_options() -> ConfigOptionsResponse:
     return get_options()
 
 
-@api_router.post("/api/leads", response_model=LeadResponse)
+@api_router.post("/leads", response_model=LeadResponse)
 def create_lead(payload: LeadCreateRequest, db: Session = Depends(get_db)) -> LeadResponse:
     lead = Lead(
         contact_name=payload.contact_name,
@@ -104,7 +118,7 @@ def create_lead(payload: LeadCreateRequest, db: Session = Depends(get_db)) -> Le
     )
 
 
-@api_router.get("/api/leads/{lead_id}", response_model=LeadResponse)
+@api_router.get("/leads/{lead_id}", response_model=LeadResponse)
 def get_lead(lead_id: str, db: Session = Depends(get_db)) -> LeadResponse:
     lead = db.get(Lead, lead_id)
     if not lead:
@@ -127,7 +141,7 @@ def get_lead(lead_id: str, db: Session = Depends(get_db)) -> LeadResponse:
     )
 
 
-@api_router.post("/api/reports", response_model=ReportResponse)
+@api_router.post("/reports", response_model=ReportResponse)
 def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -> ReportResponse:
     lead = db.get(Lead, payload.lead_id)
     if not lead:
@@ -140,7 +154,7 @@ def create_report(payload: ReportCreateRequest, db: Session = Depends(get_db)) -
     return report
 
 
-@api_router.get("/api/reports/{report_id}", response_model=ReportResponse)
+@api_router.get("/reports/{report_id}", response_model=ReportResponse)
 def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     report = db.get(Report, report_id)
     if not report:
@@ -148,7 +162,7 @@ def get_report(report_id: str, db: Session = Depends(get_db)) -> ReportResponse:
     return report
 
 
-@api_router.get("/api/reports/{report_id}/download")
+@api_router.get("/reports/{report_id}/download")
 def download_report(
     report_id: str,
     format: str = Query(pattern="^(pdf|doc)$"),

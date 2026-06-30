@@ -63,7 +63,7 @@ const options: ConfigOptionsResponse = {
   data_retention_note: "Retention note",
 };
 
-const recommendationResponse = {
+const recommendationResponse: Recommendation = {
   project_summary: "180-room hotel IPTV deployment",
   recommendations: [
     {
