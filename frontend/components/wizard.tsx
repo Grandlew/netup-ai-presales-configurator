@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useForm, type FieldErrors, type FieldPath, type UseFormReturn } from "react-hook-form";
 
 import { api } from "@/lib/api";
@@ -71,6 +71,15 @@ const stepFields: Array<FieldPath<WizardFormValues>[]> = [
 
 type BannerState = { kind: "info"; message: string } | null;
 
+function parseBudgetRange(value: unknown) {
+  if (typeof value !== "string") return { from: "", to: "" };
+  const trimmed = value.trim();
+  if (!trimmed) return { from: "", to: "" };
+
+  const [from = "", to = ""] = trimmed.split(/\s*-\s*/, 2);
+  return { from, to };
+}
+
 function labelForAudience(projectType: string | undefined) {
   if (projectType === "hotel") return "Number of rooms";
   if (projectType === "hospital") return "Number of rooms or screens";
@@ -131,6 +140,9 @@ export function Wizard({
       redundancy_required: false,
       average_channel_bitrate_mbps: 6,
       archive_days: 0,
+      budget_range: "",
+      budget_range_from: "",
+      budget_range_to: "",
       consent_given: false as never,
     },
     mode: "onTouched",
@@ -164,6 +176,7 @@ export function Wizard({
 
   useEffect(() => {
     if (!seedSignal || !seedValues) return;
+    const parsedBudgetRange = parseBudgetRange(seedValues.budget_range);
 
     form.reset({
       signal_sources: [],
@@ -174,6 +187,9 @@ export function Wizard({
       redundancy_required: false,
       average_channel_bitrate_mbps: 6,
       archive_days: 0,
+      budget_range: "",
+      budget_range_from: parsedBudgetRange.from,
+      budget_range_to: parsedBudgetRange.to,
       consent_given: false as never,
       ...(seedValues as Partial<WizardFormValues>),
     });
@@ -242,6 +258,9 @@ export function Wizard({
       redundancy_required: false,
       average_channel_bitrate_mbps: 6,
       archive_days: 0,
+      budget_range: "",
+      budget_range_from: "",
+      budget_range_to: "",
       consent_given: false as never,
     });
     setStep(0);
@@ -536,7 +555,18 @@ export function Wizard({
                 type="number"
                 showError={shouldShowError(form, "average_channel_bitrate_mbps", attemptedSteps.includes(4))}
               />
-              <FieldInput form={form} name="available_storage_tb" label="Available storage (TB)" type="number" showError={shouldShowError(form, "available_storage_tb", attemptedSteps.includes(4))} />
+              <FieldInput
+                form={form}
+                name="available_storage_tb"
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    <StorageIcon />
+                    <span>Available storage (TB)</span>
+                  </span>
+                }
+                type="number"
+                showError={shouldShowError(form, "available_storage_tb", attemptedSteps.includes(4))}
+              />
               <FieldInput
                 form={form}
                 name="existing_network_bandwidth_mbps"
@@ -578,7 +608,12 @@ export function Wizard({
                 type="date"
                 showError={shouldShowError(form, "target_launch_date", attemptedSteps.includes(4))}
               />
-              <FieldInput form={form} name="budget_range" label="Budget range" showError={shouldShowError(form, "budget_range", attemptedSteps.includes(4))} />
+              <FieldGroup label="Budget range" className="md:col-span-2">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FieldInput form={form} name="budget_range_from" label="From" showError={false} />
+                  <FieldInput form={form} name="budget_range_to" label="To" showError={false} />
+                </div>
+              </FieldGroup>
               <FieldTextArea form={form} name="existing_equipment" label="Existing equipment" showError={shouldShowError(form, "existing_equipment", attemptedSteps.includes(4))} />
             </div>
           ) : null}
@@ -692,7 +727,7 @@ function FieldInput({
 }: {
   form: UseFormReturn<WizardFormValues>;
   name: FieldPath<WizardFormValues>;
-  label: string;
+  label: ReactNode;
   type?: string;
   helperText?: string;
   showError: boolean;
@@ -738,7 +773,7 @@ function FieldTextArea({
 }: {
   form: UseFormReturn<WizardFormValues>;
   name: FieldPath<WizardFormValues>;
-  label: string;
+  label: ReactNode;
   showError: boolean;
 }) {
   const inputId = `field-${name}`;
@@ -776,7 +811,7 @@ function FieldSelect({
 }: {
   form: UseFormReturn<WizardFormValues>;
   name: FieldPath<WizardFormValues>;
-  label: string;
+  label: ReactNode;
   options: { value: string; label: string }[];
   showError: boolean;
 }) {
@@ -822,7 +857,7 @@ function FieldCheckbox({
 }: {
   form: UseFormReturn<WizardFormValues>;
   name: FieldPath<WizardFormValues>;
-  label: string;
+  label: ReactNode;
   showError: boolean;
   fullWidth?: boolean;
 }) {
@@ -867,7 +902,7 @@ function CheckboxGroup({
 }: {
   form: UseFormReturn<WizardFormValues>;
   name: FieldPath<WizardFormValues>;
-  label: string;
+  label: ReactNode;
   options: { value: string; label: string }[];
   showError: boolean;
 }) {
@@ -914,5 +949,34 @@ function CheckboxGroup({
         </span>
       ) : null}
     </fieldset>
+  );
+}
+
+function FieldGroup({
+  label,
+  className,
+  children,
+}: {
+  label: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={clsx("space-y-2 text-sm text-slate-700", className)}>
+      <span className="font-medium text-ink">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function StorageIcon() {
+  return (
+    <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <ellipse cx="12" cy="6" rx="7" ry="3" />
+        <path d="M5 6v6c0 1.66 3.13 3 7 3s7-1.34 7-3V6" />
+        <path d="M5 12v6c0 1.66 3.13 3 7 3s7-1.34 7-3v-6" />
+      </svg>
+    </span>
   );
 }

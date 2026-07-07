@@ -93,6 +93,8 @@ async function requestBlob(path: string, init?: RequestInit): Promise<Blob> {
 
 function normalizeRecommendBody(body: Record<string, unknown>) {
   const normalized = { ...body };
+  const budgetFrom = typeof normalized.budget_range_from === "string" ? normalized.budget_range_from.trim() : "";
+  const budgetTo = typeof normalized.budget_range_to === "string" ? normalized.budget_range_to.trim() : "";
 
   if (normalized.archive_days === "") {
     normalized.archive_days = 0;
@@ -116,6 +118,12 @@ function normalizeRecommendBody(body: Record<string, unknown>) {
 
   if (normalized.estimated_vod_library_size_tb === "") {
     normalized.estimated_vod_library_size_tb = null;
+  }
+
+  if (budgetFrom || budgetTo) {
+    normalized.budget_range = budgetFrom && budgetTo ? `${budgetFrom} - ${budgetTo}` : budgetFrom || budgetTo;
+  } else if (normalized.budget_range === "") {
+    normalized.budget_range = null;
   }
 
   const networkTypeMap: Record<string, string | null> = {

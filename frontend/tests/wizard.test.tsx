@@ -335,6 +335,30 @@ describe("Wizard", () => {
     expect(screen.getByRole("heading", { name: "Project profile" })).toBeInTheDocument();
   });
 
+  it("shows a storage icon label and splits budget range into from and to inputs", async () => {
+    const user = userEvent.setup();
+    render(<Wizard options={options} />);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /Project type/i }), "hotel");
+    await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.type(screen.getByRole("spinbutton", { name: /Number of TV channels/i }), "85");
+    await user.click(screen.getByRole("checkbox", { name: /Satellite/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("checkbox", { name: /Live TV/i }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(screen.getByRole("checkbox", { name: /Smart TVs/i }));
+    await user.selectOptions(screen.getByRole("combobox", { name: /Delivery mode/i }), "both");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(await screen.findByRole("spinbutton", { name: /Available storage \(TB\)/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "From" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "To" })).toBeInTheDocument();
+  });
+
   it("keeps the consent error hidden until generate is clicked and then shows it below the consent label", async () => {
     const user = userEvent.setup();
     render(<Wizard options={options} />);

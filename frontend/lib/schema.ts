@@ -24,6 +24,8 @@ export const wizardSchema = z.object({
   existing_equipment: z.string().optional(),
   target_launch_date: z.string().optional(),
   budget_range: z.string().optional(),
+  budget_range_from: z.string().optional(),
+  budget_range_to: z.string().optional(),
   hotel_tv_brand: z.string().optional(),
   hotel_tv_model: z.string().optional(),
   hotel_tv_hospitality_grade: z.boolean().optional(),
