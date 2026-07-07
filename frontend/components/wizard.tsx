@@ -621,10 +621,50 @@ export function Wizard({
           {step === 5 ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                <FieldInput form={form} name="contact_name" label="Contact name" showError={shouldShowError(form, "contact_name", attemptedSteps.includes(5))} />
-                <FieldInput form={form} name="email" label="Work email" showError={shouldShowError(form, "email", attemptedSteps.includes(5))} />
-                <FieldInput form={form} name="company" label="Company" showError={shouldShowError(form, "company", attemptedSteps.includes(5))} />
-                <FieldInput form={form} name="phone" label="Phone" showError={shouldShowError(form, "phone", attemptedSteps.includes(5))} />
+                <FieldInput
+                  form={form}
+                  name="contact_name"
+                  label={
+                    <span className="inline-flex items-center gap-2">
+                      <ContactIcon />
+                      <span>Contact name</span>
+                    </span>
+                  }
+                  showError={shouldShowError(form, "contact_name", attemptedSteps.includes(5))}
+                />
+                <FieldInput
+                  form={form}
+                  name="email"
+                  label={
+                    <span className="inline-flex items-center gap-2">
+                      <EmailIcon />
+                      <span>Work email</span>
+                    </span>
+                  }
+                  showError={shouldShowError(form, "email", attemptedSteps.includes(5))}
+                />
+                <FieldInput
+                  form={form}
+                  name="company"
+                  label={
+                    <span className="inline-flex items-center gap-2">
+                      <CompanyIcon />
+                      <span>Company</span>
+                    </span>
+                  }
+                  showError={shouldShowError(form, "company", attemptedSteps.includes(5))}
+                />
+                <FieldInput
+                  form={form}
+                  name="phone"
+                  label={
+                    <span className="inline-flex items-center gap-2">
+                      <PhoneIcon />
+                      <span>Phone</span>
+                    </span>
+                  }
+                  showError={shouldShowError(form, "phone", attemptedSteps.includes(5))}
+                />
               </div>
               <FieldTextArea
                 form={form}
@@ -976,6 +1016,50 @@ function StorageIcon() {
         <ellipse cx="12" cy="6" rx="7" ry="3" />
         <path d="M5 6v6c0 1.66 3.13 3 7 3s7-1.34 7-3V6" />
         <path d="M5 12v6c0 1.66 3.13 3 7 3s7-1.34 7-3v-6" />
+      </svg>
+    </span>
+  );
+}
+
+function ContactIcon() {
+  return (
+    <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    </span>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m4 7 8 6 8-6" />
+      </svg>
+    </span>
+  );
+}
+
+function CompanyIcon() {
+  return (
+    <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 20h16" />
+        <path d="M6 20V6l6-3 6 3v14" />
+        <path d="M9 9h.01M9 12h.01M9 15h.01M15 9h.01M15 12h.01M15 15h.01" />
+      </svg>
+    </span>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <span aria-hidden="true" className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.79.63 2.64a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6.09 6.09l1.44-1.29a2 2 0 0 1 2.11-.45c.85.3 1.74.51 2.64.63A2 2 0 0 1 22 16.92Z" />
       </svg>
     </span>
   );
