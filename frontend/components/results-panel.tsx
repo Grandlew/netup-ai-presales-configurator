@@ -86,6 +86,20 @@ function ArchitectureArrow() {
   );
 }
 
+function LinkIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue/20 bg-blue-50 text-blue"
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.7 5.22" />
+        <path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.1a5 5 0 0 0 7.07 7.07L13.3 18.8" />
+      </svg>
+    </span>
+  );
+}
+
 function ArchitectureDiagram({
   recommendation,
   submittedValues,
@@ -498,10 +512,13 @@ export function ResultsPanel({
                 href={reference.url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700 transition hover:border-slate-300"
+                className="flex items-start gap-4 rounded-3xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-700 transition hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
               >
-                <p className="font-medium text-ink">{reference.title}</p>
-                <p className="mt-1">{reference.extracted_capability}</p>
+                <LinkIcon />
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{reference.title}</p>
+                  <p className="mt-1 leading-6 text-slate-600">{reference.extracted_capability}</p>
+                </div>
               </a>
             ))}
           </div>
