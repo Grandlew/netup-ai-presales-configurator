@@ -32,6 +32,60 @@ function DetailRow({ label, value }: { label: string; value: unknown }) {
   );
 }
 
+function InfoTooltip({ label, content }: { label: string; content: string }) {
+  const tooltipId = useId();
+
+  return (
+    <span className="group relative inline-flex">
+      <button
+        type="button"
+        aria-label={label}
+        aria-describedby={tooltipId}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-paper text-slate-500 transition hover:border-slate-300 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 10v5" />
+          <path d="M12 7h.01" />
+        </svg>
+      </button>
+      <span
+        id={tooltipId}
+        role="tooltip"
+        className="pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-72 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm leading-6 text-slate-700 shadow-[0_20px_40px_rgba(15,39,69,0.14)] group-hover:block group-focus-within:block"
+      >
+        {content}
+      </span>
+    </span>
+  );
+}
+
+function SectionHeading({
+  title,
+  info,
+}: {
+  title: string;
+  info?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <h3 className="text-xl font-semibold text-ink">{title}</h3>
+      {info ? <InfoTooltip label={`${title} information`} content={info} /> : null}
+    </div>
+  );
+}
+
+function ArchitectureArrow() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-blue/20 bg-blue-50 text-2xl font-semibold text-blue shadow-[0_10px_24px_rgba(45,91,145,0.16)] print:h-8 print:w-8 print:text-base"
+    >
+      &rarr;
+    </div>
+  );
+}
+
 function ArchitectureDiagram({
   recommendation,
   submittedValues,
@@ -47,12 +101,10 @@ function ArchitectureDiagram({
 
   return (
     <section className="panel p-5 md:p-6 print:break-inside-avoid" data-testid="architecture-diagram">
-      <div className="flex flex-col gap-3">
-        <h3 className="text-xl font-semibold text-ink">Proposed solution architecture</h3>
-        <p className="text-sm text-slate-600">
-          This deterministic sequence uses only the selected requirements and recommended NetUP product families.
-        </p>
-      </div>
+      <SectionHeading
+        title="Proposed solution architecture"
+        info="This deterministic sequence uses only the selected requirements and recommended NetUP product families."
+      />
       <p className="sr-only">Architecture sequence: {getArchitectureText(stages)}</p>
       <div className="mt-5 flex flex-wrap items-center gap-3 print:gap-2">
         {stages.map((stage, index) => (
@@ -61,16 +113,9 @@ function ArchitectureDiagram({
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{stage.label}</p>
               <p className="mt-2 text-sm font-medium text-ink">{stage.items.join(", ")}</p>
             </div>
-            {index < stages.length - 1 ? (
-              <div aria-hidden="true" className="flex h-10 w-10 items-center justify-center text-xl font-semibold text-blue print:w-6">
-                &rarr;
-              </div>
-            ) : null}
+            {index < stages.length - 1 ? <ArchitectureArrow /> : null}
           </div>
         ))}
-      </div>
-      <div className="mt-5 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700">
-        Preliminary architecture. Final interfaces, redundancy, capacity, licensing, and compatibility require NetUP engineering validation.
       </div>
     </section>
   );
@@ -204,21 +249,22 @@ export function ResultsPanel({
   return (
     <div className="mx-auto w-full max-w-[1240px] space-y-6 print:max-w-none">
       <section className="panel p-5 md:p-7 print:break-inside-avoid">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm uppercase tracking-[0.24em] text-blue">Preliminary Solution Recommendation</p>
+        <SectionHeading
+          title="Project summary"
+          info="This preliminary recommendation summarizes the current NetUP fit, estimated capacity, and the follow-up items needed before engineering validation."
+        />
+        <div className="mt-5 flex flex-col gap-6">
+          <div className="text-center">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <p className="text-sm uppercase tracking-[0.24em] text-blue">Preliminary solution recommendation</p>
               <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue">
                 Preliminary
               </span>
             </div>
-            <h2 className="mt-3 max-w-4xl text-2xl font-semibold text-ink md:text-3xl">{projectTitle}</h2>
-            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-700">
-              This preliminary recommendation summarizes the current NetUP fit, estimated capacity, and the follow-up items needed before engineering validation.
-            </p>
+            <h2 className="mx-auto mt-3 max-w-4xl text-2xl font-semibold text-ink md:text-3xl">{projectTitle}</h2>
           </div>
 
-          <dl className="grid shrink-0 gap-3 rounded-3xl bg-paper p-4 text-sm text-slate-700 sm:grid-cols-3 xl:w-[430px]">
+          <dl className="grid gap-3 rounded-3xl bg-paper p-4 text-sm text-slate-700 sm:grid-cols-3">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Generated date</dt>
               <dd className="mt-1 font-medium text-ink">{generatedDate}</dd>
@@ -232,30 +278,27 @@ export function ResultsPanel({
               <dd className="mt-1 font-medium text-ink">{formatRuleVersion(recommendation.rule_version)}</dd>
             </div>
           </dl>
-        </div>
-      </section>
 
-      <section className="panel p-5 md:p-6 print:break-inside-avoid">
-        <h3 className="text-xl font-semibold text-ink">Project summary</h3>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <DetailRow label="Project type" value={submittedValues?.project_type} />
-          <DetailRow label="Country" value={submittedValues?.country} />
-          <DetailRow label="Rooms or endpoints" value={submittedValues?.subscribers_or_rooms} />
-          <DetailRow label="Channels" value={submittedValues?.number_of_channels} />
-          <DetailRow label="Delivery mode" value={submittedValues?.delivery_mode} />
-          <DetailRow label="Selected services" value={submittedValues?.services} />
-          <DetailRow label="Selected devices" value={submittedValues?.viewer_devices} />
-          <DetailRow label="Signal sources" value={submittedValues?.signal_sources} />
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <DetailRow label="Project type" value={submittedValues?.project_type} />
+            <DetailRow label="Country" value={submittedValues?.country} />
+            <DetailRow label="Rooms or endpoints" value={submittedValues?.subscribers_or_rooms} />
+            <DetailRow label="Channels" value={submittedValues?.number_of_channels} />
+            <DetailRow label="Delivery mode" value={submittedValues?.delivery_mode} />
+            <DetailRow label="Selected services" value={submittedValues?.services} />
+            <DetailRow label="Selected devices" value={submittedValues?.viewer_devices} />
+            <DetailRow label="Signal sources" value={submittedValues?.signal_sources} />
+          </div>
         </div>
       </section>
 
       <ArchitectureDiagram recommendation={recommendation} submittedValues={submittedValues} />
 
       <section className="panel p-5 md:p-6">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-xl font-semibold text-ink">Recommended product families</h3>
-          <p className="text-sm text-slate-600">Each product is tagged with a confidence status so inferred or conditional conclusions are not presented as confirmed facts.</p>
-        </div>
+        <SectionHeading
+          title="Recommended product families"
+          info="Each product is tagged with a confidence status so inferred or conditional conclusions are not presented as confirmed facts."
+        />
         <div className="mt-5 grid gap-4">
           {recommendation.recommendations.map((item, index) => (
             <ProductCard key={`${item.category}-${item.product}`} item={item} submittedValues={submittedValues} defaultExpanded={index === 0} />
@@ -354,8 +397,10 @@ export function ResultsPanel({
         <div className="panel p-5 md:p-6 print:break-inside-avoid">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-xl font-semibold text-ink">Missing decision-critical information</h3>
-              <p className="mt-2 text-sm text-slate-600">Only recommendation, capacity, or implementation inputs that materially affect the design are listed here.</p>
+              <SectionHeading
+                title="Missing decision-critical information"
+                info="Only recommendation, capacity, or implementation inputs that materially affect the design are listed here."
+              />
             </div>
             {recommendation.missing_information.length ? (
               <button
@@ -530,8 +575,10 @@ export function ResultsPanel({
         <section className="panel p-5 md:p-6 print:hidden" data-testid="report-preview">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-xl font-semibold text-ink">Printable report preview</h3>
-              <p className="mt-2 text-sm text-slate-600">The customer-facing report includes the architecture, recommendations, capacity estimates, warnings, and disclaimer footer.</p>
+              <SectionHeading
+                title="Printable report preview"
+                info="The customer-facing report includes the architecture, recommendations, capacity estimates, warnings, and disclaimer footer."
+              />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <a
@@ -563,8 +610,10 @@ export function ResultsPanel({
         </section>
       ) : reportReady ? (
         <section className="panel p-5 md:p-6 print:hidden" data-testid="report-ready">
-          <h3 className="text-xl font-semibold text-ink">Report ready for download</h3>
-          <p className="mt-2 text-sm text-slate-600">The latest printable report is ready. Use the download options once the preview is opened.</p>
+          <SectionHeading
+            title="Report ready for download"
+            info="The latest printable report is ready. Use the download options once the preview is opened."
+          />
         </section>
       ) : null}
     </div>

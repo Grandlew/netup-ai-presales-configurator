@@ -164,8 +164,6 @@ export default function ResultsPage() {
   return (
     <main className="shell">
       <div className="space-y-5">
-        <p className="text-sm uppercase tracking-[0.28em] text-blue print:hidden">NetUP AI Presales Configurator</p>
-
         {banner ? (
           <div
             className={banner.kind === "success" ? "panel border-blue/30 bg-blue-50 px-5 py-4 text-sm text-ink" : "panel border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700"}
@@ -192,6 +190,10 @@ export default function ResultsPage() {
           loadingAction={loadingAction}
         />
       </div>
+
+      <footer className="mt-8 border-t border-slate-200 pt-6 text-center print:hidden">
+        <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
+      </footer>
 
       {startOverOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/35 px-4">
