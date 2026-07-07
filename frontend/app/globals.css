@@ -3,15 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7fafc;
+  --background: #eef4fb;
   --foreground: #10233d;
-  --card: #ffffff;
-  --border: #d7e1ef;
+  --card: rgba(255, 255, 255, 0.82);
+  --border: rgba(183, 201, 225, 0.72);
   --accent: #2d5b91;
 }
 
 body {
-  background: linear-gradient(180deg, #f4f8fd 0%, #ffffff 25%, #f7fafc 100%);
+  background:
+    radial-gradient(circle at top left, rgba(45, 91, 145, 0.16), transparent 22%),
+    radial-gradient(circle at top right, rgba(23, 54, 93, 0.14), transparent 24%),
+    linear-gradient(180deg, #eef4fb 0%, #f6f9fd 32%, #fbfcfe 66%, #eef3f9 100%);
   color: var(--foreground);
   overflow-x: clip;
 }
@@ -21,7 +24,7 @@ body {
 }
 
 .panel {
-  @apply rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,39,69,0.08)];
+  @apply rounded-3xl border border-slate-200/80 bg-white/85 backdrop-blur-sm shadow-[0_22px_70px_rgba(15,39,69,0.10)];
 }
 
 .step-panel {

@@ -25,7 +25,7 @@ function formatList(items: string[], emptyMessage: string) {
 
 function DetailRow({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="rounded-2xl bg-paper px-4 py-3">
+    <div className="rounded-2xl border border-white/80 bg-white/78 px-4 py-3 shadow-[0_10px_30px_rgba(15,39,69,0.06)] backdrop-blur-sm">
       <dt className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</dt>
       <dd className="mt-1 text-sm text-ink">{formatValue(value)}</dd>
     </div>
@@ -114,7 +114,7 @@ function ArchitectureDiagram({
   }
 
   return (
-    <section className="panel p-5 md:p-6 print:break-inside-avoid" data-testid="architecture-diagram">
+    <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(237,244,251,0.95)_100%)] p-5 md:p-6 print:break-inside-avoid" data-testid="architecture-diagram">
       <SectionHeading
         title="Proposed solution architecture"
         info="This deterministic sequence uses only the selected requirements and recommended NetUP product families."
@@ -123,7 +123,7 @@ function ArchitectureDiagram({
       <div className="mt-5 flex flex-wrap items-center gap-3 print:gap-2">
         {stages.map((stage, index) => (
           <div key={stage.id} className="contents">
-            <div className="min-w-[160px] flex-1 rounded-3xl border border-slate-200 bg-white px-4 py-4 print:break-inside-avoid">
+            <div className="min-w-[160px] flex-1 rounded-3xl border border-white/80 bg-white/86 px-4 py-4 shadow-[0_12px_30px_rgba(15,39,69,0.08)] print:break-inside-avoid">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{stage.label}</p>
               <p className="mt-2 text-sm font-medium text-ink">{stage.items.join(", ")}</p>
             </div>
@@ -150,7 +150,7 @@ function ProductCard({
   const visibleWarning = getVisibleProductWarning(item);
 
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 print:break-inside-avoid">
+    <article className="rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,251,254,0.96)_100%)] p-5 shadow-[0_14px_36px_rgba(15,39,69,0.06)] print:break-inside-avoid">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue">{item.category}</p>
@@ -262,7 +262,7 @@ export function ResultsPanel({
 
   return (
     <div className="mx-auto w-full max-w-[1240px] space-y-6 print:max-w-none">
-      <section className="panel p-5 md:p-7 print:break-inside-avoid">
+      <section className="panel overflow-hidden border-blue/20 bg-[radial-gradient(circle_at_top_left,rgba(45,91,145,0.16),transparent_24%),linear-gradient(135deg,rgba(250,252,255,0.96)_0%,rgba(235,243,251,0.96)_58%,rgba(255,255,255,0.96)_100%)] p-5 md:p-7 print:break-inside-avoid">
         <SectionHeading
           title="Project summary"
           info="This preliminary recommendation summarizes the current NetUP fit, estimated capacity, and the follow-up items needed before engineering validation."
@@ -278,7 +278,7 @@ export function ResultsPanel({
             <h2 className="mx-auto mt-3 max-w-4xl text-2xl font-semibold text-ink md:text-3xl">{projectTitle}</h2>
           </div>
 
-          <dl className="grid gap-3 rounded-3xl bg-paper p-4 text-sm text-slate-700 sm:grid-cols-3">
+          <dl className="grid gap-3 rounded-3xl border border-white/80 bg-white/76 p-4 text-sm text-slate-700 shadow-[0_12px_30px_rgba(15,39,69,0.06)] sm:grid-cols-3">
             <div>
               <dt className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Generated date</dt>
               <dd className="mt-1 font-medium text-ink">{generatedDate}</dd>
@@ -308,7 +308,7 @@ export function ResultsPanel({
 
       <ArchitectureDiagram recommendation={recommendation} submittedValues={submittedValues} />
 
-      <section className="panel p-5 md:p-6">
+      <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,251,254,0.96)_100%)] p-5 md:p-6">
         <SectionHeading
           title="Recommended product families"
           info="Each product is tagged with a confidence status so inferred or conditional conclusions are not presented as confirmed facts."
@@ -320,11 +320,11 @@ export function ResultsPanel({
         </div>
       </section>
 
-      <section className="panel p-5 md:p-6 print:break-inside-avoid" data-testid="capacity-section">
+      <section className="panel border-amber-100 bg-[linear-gradient(180deg,rgba(255,252,246,0.96)_0%,rgba(246,250,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid" data-testid="capacity-section">
         <h3 className="text-xl font-semibold text-ink">Capacity estimates</h3>
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <div className="rounded-3xl bg-paper p-5" data-testid="capacity-card">
+          <div className="rounded-3xl border border-white/80 bg-white/78 p-5 shadow-[0_12px_30px_rgba(15,39,69,0.06)]" data-testid="capacity-card">
             <p className="text-sm font-medium text-slate-500">Concurrent viewers</p>
             <p className="mt-3 whitespace-nowrap text-3xl font-semibold text-ink">{formatNumber(concurrentViewers, 0)}</p>
             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
@@ -333,7 +333,7 @@ export function ResultsPanel({
             </div>
           </div>
 
-          <div className="rounded-3xl bg-paper p-5" data-testid="capacity-card">
+          <div className="rounded-3xl border border-white/80 bg-white/78 p-5 shadow-[0_12px_30px_rgba(15,39,69,0.06)]" data-testid="capacity-card">
             <p className="text-sm font-medium text-slate-500">Estimated OTT viewer egress</p>
             <p className="mt-3 whitespace-nowrap text-3xl font-semibold text-ink">{formatNumber(recommendation.capacity.safety_adjusted_bandwidth_mbps)} Mbps</p>
             <div className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-600">
@@ -344,7 +344,7 @@ export function ResultsPanel({
             </div>
           </div>
 
-          <div className="rounded-3xl bg-paper p-5" data-testid="capacity-card">
+          <div className="rounded-3xl border border-white/80 bg-white/78 p-5 shadow-[0_12px_30px_rgba(15,39,69,0.06)]" data-testid="capacity-card">
             <p className="text-sm font-medium text-slate-500">Estimated archive storage</p>
             <p className="mt-3 whitespace-nowrap text-3xl font-semibold text-ink">
               {recommendation.capacity.storage_status === "unknown"
@@ -368,7 +368,7 @@ export function ResultsPanel({
           </div>
         </div>
 
-        <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-5 print:break-inside-avoid">
+        <div className="mt-5 rounded-3xl border border-white/80 bg-white/78 p-5 shadow-[0_12px_30px_rgba(15,39,69,0.06)] print:break-inside-avoid">
           <p className="text-sm font-semibold text-ink">Formula and assumptions</p>
           <ol className="mt-4 space-y-2 text-sm text-slate-700">
             {formulaLines.map((line) => (
@@ -397,7 +397,7 @@ export function ResultsPanel({
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="panel p-5 md:p-6 print:break-inside-avoid">
+        <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Assumptions</h3>
           <ul className="mt-4 space-y-3 text-sm text-slate-700">
             {formatList(recommendation.assumptions, "No additional assumptions were noted.").map((item) => (
@@ -408,7 +408,7 @@ export function ResultsPanel({
           </ul>
         </div>
 
-        <div className="panel p-5 md:p-6 print:break-inside-avoid">
+        <div className="panel border-amber-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(255,249,240,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <div className="flex items-start justify-between gap-4">
             <div>
               <SectionHeading
@@ -453,7 +453,7 @@ export function ResultsPanel({
         </div>
       </section>
 
-      <section className="panel p-5 md:p-6 print:break-inside-avoid">
+      <section className="panel border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,242,0.96)_0%,rgba(255,255,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
         <h3 className="flex items-center gap-2 text-xl font-semibold text-ink">
           <span aria-hidden="true">!</span>
           <span>Engineering warnings</span>
@@ -468,7 +468,7 @@ export function ResultsPanel({
       </section>
 
       {claimStatements.length ? (
-        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+        <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Claim status</h3>
           <div className="mt-4 grid gap-3">
             {claimStatements.map((statement) => (
@@ -486,7 +486,7 @@ export function ResultsPanel({
       ) : null}
 
       {alternativeArchitectures.length ? (
-        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+        <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Alternative architecture</h3>
           <div className="mt-4 grid gap-4">
             {alternativeArchitectures.map((option) => (
@@ -503,7 +503,7 @@ export function ResultsPanel({
       ) : null}
 
       {officialReferences.length ? (
-        <section className="panel p-5 md:p-6 print:break-inside-avoid">
+        <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Official NetUP references</h3>
           <div className="mt-4 grid gap-3">
             {officialReferences.map((reference) => (
@@ -526,7 +526,7 @@ export function ResultsPanel({
       ) : null}
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.7fr)]">
-        <div className="panel p-5 md:p-6 print:break-inside-avoid">
+        <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
           <h3 className="text-xl font-semibold text-ink">Next steps</h3>
           <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
             <li className="rounded-2xl bg-paper px-4 py-3">1. Review the preliminary recommendation.</li>
@@ -542,14 +542,14 @@ export function ResultsPanel({
           ) : null}
         </div>
 
-        <section className="panel p-5 md:p-6 print:hidden" data-testid="actions-card">
-          <h3 className="text-xl font-semibold text-ink">Actions</h3>
+        <section className="panel border-ink/10 bg-[linear-gradient(160deg,rgba(15,39,69,0.98)_0%,rgba(31,71,117,0.96)_100%)] p-5 text-white print:hidden" data-testid="actions-card">
+          <h3 className="text-xl font-semibold text-white">Actions</h3>
           <div className="mt-5 flex flex-col gap-3">
             <button
               type="button"
               onClick={() => void onRequestEngineeringReview()}
               disabled={loadingAction}
-              className="min-h-12 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+              className="min-h-12 rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
               Request engineering review
             </button>
@@ -557,7 +557,7 @@ export function ResultsPanel({
               type="button"
               onClick={() => void onPrintReport()}
               disabled={loadingAction}
-              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
               Download preliminary report
             </button>
@@ -566,21 +566,21 @@ export function ResultsPanel({
               onClick={() => void onSaveLead()}
               disabled={loadingAction}
               aria-label={leadSaved ? "Save lead completed" : "Save lead"}
-              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
               Save lead
             </button>
             <button
               type="button"
               onClick={onEditConfiguration}
-              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
             >
               Edit configuration
             </button>
             <button
               type="button"
               onClick={onStartOver}
-              className="min-h-12 rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
             >
               Start over
             </button>
@@ -589,7 +589,7 @@ export function ResultsPanel({
       </section>
 
       {reportHtml ? (
-        <section className="panel p-5 md:p-6 print:hidden" data-testid="report-preview">
+        <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:hidden" data-testid="report-preview">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <SectionHeading
@@ -626,7 +626,7 @@ export function ResultsPanel({
           <iframe title="Report Preview" className="mt-4 h-[520px] w-full rounded-2xl border border-slate-200 bg-white" srcDoc={reportHtml} />
         </section>
       ) : reportReady ? (
-        <section className="panel p-5 md:p-6 print:hidden" data-testid="report-ready">
+        <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:hidden" data-testid="report-ready">
           <SectionHeading
             title="Report ready for download"
             info="The latest printable report is ready. Use the download options once the preview is opened."
