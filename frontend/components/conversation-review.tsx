@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { setReviewAuditTrace } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse, ExtractResponse } from "@/lib/types";
@@ -123,6 +123,134 @@ type TraceEntry = {
   user_confirmed_value?: unknown;
   user_edited_value?: unknown;
 };
+
+type SummaryIconProps = {
+  className?: string;
+};
+
+function SummaryIconWrapper({
+  className,
+  children,
+}: SummaryIconProps & {
+  children: ReactNode;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={clsx("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue", className)}
+    >
+      {children}
+    </span>
+  );
+}
+
+function BuildingIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 20h16" />
+        <path d="M6 20V6l6-3 6 3v14" />
+        <path d="M9 9h.01M9 12h.01M9 15h.01M15 9h.01M15 12h.01M15 15h.01" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function UsersIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+        <circle cx="9.5" cy="7" r="3" />
+        <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M15 4.13a3 3 0 0 1 0 5.74" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function TvIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="5" width="18" height="12" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function SatelliteIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m6 21 6-6" />
+        <path d="m5 16 3 3" />
+        <path d="M14.5 9.5 19 5l-4-1-1 4 4.5 4.5Z" />
+        <path d="M15 9a6 6 0 0 0-6-6" />
+        <path d="M18 6a9 9 0 0 0-9-9" transform="translate(0 9)" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function NetworkIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="3" width="6" height="6" rx="1.5" />
+        <rect x="3" y="15" width="6" height="6" rx="1.5" />
+        <rect x="15" y="15" width="6" height="6" rx="1.5" />
+        <path d="M12 9v3M6 15v-1.5A1.5 1.5 0 0 1 7.5 12h9A1.5 1.5 0 0 1 18 13.5V15" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function CatchupIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+        <path d="M8 4H4v4" />
+        <path d="M4 8a9 9 0 0 1 15.5-2.5" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function PhoneIcon({ className }: SummaryIconProps) {
+  return (
+    <SummaryIconWrapper className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="7" y="3" width="10" height="18" rx="2" />
+        <path d="M11 18h2" />
+      </svg>
+    </SummaryIconWrapper>
+  );
+}
+
+function getSummaryIcon(field: string, value: unknown) {
+  if (field === "project_type" && String(value) === "hotel") return <BuildingIcon />;
+  if (field === "subscribers_or_rooms") return <UsersIcon />;
+  if (field === "number_of_channels") return <TvIcon />;
+  if (field === "hotel_tv_brand") return <TvIcon />;
+
+  if (field === "signal_sources") {
+    if (String(value) === "satellite") return <SatelliteIcon />;
+    if (String(value) === "ip_streams") return <NetworkIcon />;
+  }
+
+  if (field === "services" && String(value) === "catchup_tv") return <CatchupIcon />;
+
+  if (field === "viewer_devices") {
+    if (String(value) === "smart_tv") return <TvIcon />;
+    if (String(value) === "mobile") return <PhoneIcon />;
+  }
+
+  return null;
+}
 
 function humanize(value: string) {
   if (ENUM_LABELS[value]) return ENUM_LABELS[value];
@@ -698,13 +826,17 @@ export function ConversationReview({
                 {Array.isArray(entry.value) ? (
                   <div className="flex flex-wrap gap-2">
                     {entry.value.map((item) => (
-                      <span key={item} className="rounded-full border border-slate-200 bg-paper px-3 py-1 text-sm text-ink">
+                      <span key={item} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-paper px-3 py-1 text-sm text-ink">
+                        {getSummaryIcon(entry.field, item)}
                         {getOptionLabel(options, entry.field, String(item))}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  formatValue(entry.value)
+                  <span className="inline-flex items-center gap-3">
+                    {getSummaryIcon(entry.field, entry.value)}
+                    <span>{formatValue(entry.value)}</span>
+                  </span>
                 )}
               </dd>
               {entry.sourceText ? <p className="mt-2 text-xs text-slate-500">Source: "{entry.sourceText}"</p> : null}
