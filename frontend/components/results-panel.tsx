@@ -32,6 +32,22 @@ function DetailRow({ label, value }: { label: string; value: unknown }) {
   );
 }
 
+function StatusPill({ status }: { status: "detected" | "validated_rule" | "needs_engineer_review" }) {
+  const labels = {
+    detected: "Detected",
+    validated_rule: "Validated rule",
+    needs_engineer_review: "Needs engineer review",
+  };
+
+  const styles = {
+    detected: "bg-blue-50 text-blue",
+    validated_rule: "bg-emerald-50 text-emerald-700",
+    needs_engineer_review: "bg-amber-50 text-amber-900",
+  };
+
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${styles[status]}`}>{labels[status]}</span>;
+}
+
 function InfoTooltip({ label, content }: { label: string; content: string }) {
   const tooltipId = useId();
 
@@ -116,7 +132,7 @@ function ArchitectureDiagram({
   return (
     <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(237,244,251,0.95)_100%)] p-5 md:p-6 print:break-inside-avoid" data-testid="architecture-diagram">
       <SectionHeading
-        title="Proposed solution architecture"
+        title="Architecture Overview"
         info="This deterministic sequence uses only the selected requirements and recommended NetUP product families."
       />
       <p className="sr-only">Architecture sequence: {getArchitectureText(stages)}</p>
@@ -222,6 +238,7 @@ export function ResultsPanel({
   onRequestEngineeringReview,
   onSaveLead,
   onPrintReport,
+  onCopyReport,
   onDownloadPdf,
   onDownloadWord,
   onStartOver,
@@ -237,6 +254,7 @@ export function ResultsPanel({
   onRequestEngineeringReview: () => void | Promise<boolean>;
   onSaveLead: () => void | Promise<boolean>;
   onPrintReport: () => void | Promise<boolean>;
+  onCopyReport: () => void | Promise<boolean>;
   onDownloadPdf: () => void | Promise<boolean>;
   onDownloadWord: () => void | Promise<boolean>;
   onStartOver: () => void;
@@ -264,7 +282,7 @@ export function ResultsPanel({
     <div className="mx-auto w-full max-w-[1240px] space-y-6 print:max-w-none">
       <section className="panel overflow-hidden border-blue/20 bg-[radial-gradient(circle_at_top_left,rgba(45,91,145,0.16),transparent_24%),linear-gradient(135deg,rgba(250,252,255,0.96)_0%,rgba(235,243,251,0.96)_58%,rgba(255,255,255,0.96)_100%)] p-5 md:p-7 print:break-inside-avoid">
         <SectionHeading
-          title="Project summary"
+          title="Executive Summary"
           info="This preliminary recommendation summarizes the current NetUP fit, estimated capacity, and the follow-up items needed before engineering validation."
         />
         <div className="mt-5 flex flex-col gap-6">
@@ -293,7 +311,12 @@ export function ResultsPanel({
             </div>
           </dl>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h3 className="text-xl font-semibold text-ink">Detected Requirements</h3>
+              <StatusPill status="detected" />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <DetailRow label="Project type" value={submittedValues?.project_type} />
             <DetailRow label="Country" value={submittedValues?.country} />
             <DetailRow label="Rooms or endpoints" value={submittedValues?.subscribers_or_rooms} />
@@ -302,6 +325,7 @@ export function ResultsPanel({
             <DetailRow label="Selected services" value={submittedValues?.services} />
             <DetailRow label="Selected devices" value={submittedValues?.viewer_devices} />
             <DetailRow label="Signal sources" value={submittedValues?.signal_sources} />
+            </div>
           </div>
         </div>
       </section>
@@ -310,7 +334,7 @@ export function ResultsPanel({
 
       <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,251,254,0.96)_100%)] p-5 md:p-6">
         <SectionHeading
-          title="Recommended product families"
+          title="Recommended NetUP Components"
           info="Each product is tagged with a confidence status so inferred or conditional conclusions are not presented as confirmed facts."
         />
         <div className="mt-5 grid gap-4">
@@ -321,7 +345,7 @@ export function ResultsPanel({
       </section>
 
       <section className="panel border-amber-100 bg-[linear-gradient(180deg,rgba(255,252,246,0.96)_0%,rgba(246,250,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid" data-testid="capacity-section">
-        <h3 className="text-xl font-semibold text-ink">Capacity estimates</h3>
+        <h3 className="text-xl font-semibold text-ink">Capacity Assumptions</h3>
 
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           <div className="rounded-3xl border border-white/80 bg-white/78 p-5 shadow-[0_12px_30px_rgba(15,39,69,0.06)]" data-testid="capacity-card">
@@ -398,7 +422,7 @@ export function ResultsPanel({
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
-          <h3 className="text-xl font-semibold text-ink">Assumptions</h3>
+          <h3 className="text-xl font-semibold text-ink">Risks / Unknowns</h3>
           <ul className="mt-4 space-y-3 text-sm text-slate-700">
             {formatList(recommendation.assumptions, "No additional assumptions were noted.").map((item) => (
               <li key={item} className="rounded-2xl bg-paper px-4 py-3">
@@ -412,7 +436,7 @@ export function ResultsPanel({
           <div className="flex items-start justify-between gap-4">
             <div>
               <SectionHeading
-                title="Missing decision-critical information"
+                title="Questions for NetUP Engineer"
                 info="Only recommendation, capacity, or implementation inputs that materially affect the design are listed here."
               />
             </div>
@@ -456,7 +480,7 @@ export function ResultsPanel({
       <section className="panel border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,242,0.96)_0%,rgba(255,255,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
         <h3 className="flex items-center gap-2 text-xl font-semibold text-ink">
           <span aria-hidden="true">!</span>
-          <span>Engineering warnings</span>
+          <span>Additional Engineer Warnings</span>
         </h3>
         <ul className="mt-4 space-y-3 text-sm text-slate-700">
           {formatList(recommendation.warnings, "No engineering warnings were raised by the current rules.").map((item) => (
@@ -469,7 +493,7 @@ export function ResultsPanel({
 
       {claimStatements.length ? (
         <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
-          <h3 className="text-xl font-semibold text-ink">Claim status</h3>
+          <h3 className="text-xl font-semibold text-ink">Validation Status</h3>
           <div className="mt-4 grid gap-3">
             {claimStatements.map((statement) => (
               <div key={statement.claim} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
@@ -527,7 +551,7 @@ export function ResultsPanel({
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.7fr)]">
         <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6 print:break-inside-avoid">
-          <h3 className="text-xl font-semibold text-ink">Next steps</h3>
+          <h3 className="text-xl font-semibold text-ink">Recommended Next Step</h3>
           <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
             <li className="rounded-2xl bg-paper px-4 py-3">1. Review the preliminary recommendation.</li>
             <li className="rounded-2xl bg-paper px-4 py-3">2. Confirm unresolved technical and commercial requirements.</li>
@@ -547,42 +571,34 @@ export function ResultsPanel({
           <div className="mt-5 flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => void onRequestEngineeringReview()}
+              onClick={() => void onDownloadPdf()}
               disabled={loadingAction}
               className="min-h-12 rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              Request engineering review
+              Download PDF
             </button>
             <button
               type="button"
-              onClick={() => void onPrintReport()}
+              onClick={() => void onCopyReport()}
               disabled={loadingAction}
               className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              Download preliminary report
-            </button>
-            <button
-              type="button"
-              onClick={() => void onSaveLead()}
-              disabled={loadingAction}
-              aria-label={leadSaved ? "Save lead completed" : "Save lead"}
-              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
-            >
-              Save lead
-            </button>
-            <button
-              type="button"
-              onClick={onEditConfiguration}
-              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-            >
-              Edit configuration
+              Copy Report
             </button>
             <button
               type="button"
               onClick={onStartOver}
-              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/45 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:opacity-50"
             >
-              Start over
+              Start New Configuration
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Engineer handoff integration not configured yet."
+              className="min-h-12 rounded-full border border-white/25 px-5 py-3 text-sm font-semibold text-white/70 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed"
+            >
+              Send to NetUP Engineer
             </button>
           </div>
         </section>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { IntakePromptAssist } from "@/components/home-workspace";
 import { ApiError, api } from "@/lib/api";
 import type { ExtractResponse } from "@/lib/types";
 
@@ -65,13 +66,22 @@ export function ConversationPanel({
     }
   };
 
+  function applyExamplePrompt(value: string) {
+    setMessage(value);
+    setError(null);
+  }
+
   return (
-    <div className="panel p-5 md:p-6">
-      <p className="text-sm uppercase tracking-[0.24em] text-blue">Describe My Project</p>
-      <h2 className="mt-2 text-[1.7rem] font-semibold text-ink">Natural-language intake</h2>
-      <p className="mt-2 text-sm text-slate-600">
-        Describe your project in plain language. The AI layer only extracts requirements and asks follow-up questions.
+    <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-5 md:p-6">
+      <p className="text-sm uppercase tracking-[0.24em] text-blue">Intake Workspace</p>
+      <h2 className="mt-2 text-[1.9rem] font-semibold text-ink">Project intake and requirement analysis</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Describe the project in plain language and the assistant will extract technical requirements for rule-based NetUP validation.
       </p>
+
+      <div className="mt-5">
+        <IntakePromptAssist onSelect={applyExamplePrompt} />
+      </div>
 
       <label htmlFor="conversation-message" className="mt-5 block text-sm font-medium text-ink">
         Project description
@@ -80,13 +90,30 @@ export function ConversationPanel({
         id="conversation-message"
         maxLength={MAX_MESSAGE_LENGTH}
         className="mt-2 min-h-36 w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
-        placeholder="We have a 180-room hotel. We want 85 satellite and IP channels on LG Smart TVs, plus catch-up TV and mobile viewing."
+        placeholder="Example: 180-room hotel with LG Smart TVs, 85 channels, satellite + IP sources, catch-up TV, and mobile viewing."
         value={message}
         onChange={(event) => setMessage(event.target.value)}
       />
       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-        <span>Use the guided configurator anytime if you already know the project details.</span>
+        <span>Use the guided questionnaire anytime if you already know the technical scope.</span>
         <span aria-live="polite">{`${message.length}/${MAX_MESSAGE_LENGTH}`}</span>
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white/72 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-ink">Upload requirements</p>
+            <p className="mt-1 text-sm text-slate-600">Requirement attachment intake is not configured yet in this deployment.</p>
+          </div>
+          <button
+            type="button"
+            disabled
+            title="Engineer handoff integration not configured yet."
+            className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-400"
+          >
+            Upload requirements
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -102,7 +129,7 @@ export function ConversationPanel({
               <span>Extracting project requirements...</span>
             </>
           ) : (
-            "Extract requirements"
+            "Analyze Project Requirements"
           )}
         </button>
         <button
@@ -123,7 +150,7 @@ export function ConversationPanel({
         ) : null}
       </div>
 
-      {showRetry ? (
+        {showRetry ? (
         <div className="mt-4">
           <button
             type="button"

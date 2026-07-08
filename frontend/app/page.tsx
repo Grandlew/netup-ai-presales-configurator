@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ConversationPanel } from "@/components/conversation-panel";
+import { HeroSection, HomeWorkspacePreview } from "@/components/home-workspace";
 import { Wizard } from "@/components/wizard";
 import { api } from "@/lib/api";
-import { consumeHomeNavigationIntent, setReviewPayload } from "@/lib/flow-storage";
+import { consumeHomeNavigationIntent, getResultsPayload, getReviewPayload, setReviewPayload } from "@/lib/flow-storage";
 import type { ConfigOptionsResponse, ExtractResponse } from "@/lib/types";
 
 export default function HomePage() {
@@ -20,6 +21,8 @@ export default function HomePage() {
   const [wizardSeedValues, setWizardSeedValues] = useState<Record<string, unknown> | null>(null);
   const [wizardSeedSignal, setWizardSeedSignal] = useState(0);
   const [wizardSeedStep, setWizardSeedStep] = useState(0);
+  const [reviewPayload, setExistingReviewPayload] = useState(getReviewPayload());
+  const [resultsPayload, setExistingResultsPayload] = useState(getResultsPayload());
   const wizardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -71,6 +74,7 @@ export default function HomePage() {
 
   function showConversationReview(response: ExtractResponse, originalMessage: string) {
     setReviewPayload({ response, originalMessage });
+    setExistingReviewPayload({ response, originalMessage });
     router.push("/review");
   }
 
@@ -80,24 +84,48 @@ export default function HomePage() {
         {modeAnnouncement}
       </div>
 
-      <section
-        className={
-          entryMode === "conversation"
-            ? "grid gap-7 xl:grid-cols-[minmax(0,1.22fr)_minmax(300px,0.78fr)] xl:items-start"
-            : "grid gap-7"
-        }
-      >
-        <div id="guided-configurator" ref={wizardRef} className="min-w-0 space-y-5">
-          <p className="text-sm uppercase tracking-[0.28em] text-blue">NetUP AI Presales Configurator</p>
-          <h1 className="max-w-4xl font-serif text-[2.7rem] leading-[1.05] text-ink md:text-[3.2rem] xl:text-[4rem]">
-            Design Your IPTV or OTT Solution
-          </h1>
-          <p className="max-w-3xl text-[1.05rem] text-slate-600 md:text-lg">
-            Describe your project or complete the guided questionnaire to receive a preliminary NetUP solution recommendation.
-          </p>
-          <div className="panel max-w-3xl p-5 text-sm text-slate-600">
-            This configurator provides a preliminary recommendation. Final equipment, licensing, capacity, compatibility, redundancy, and pricing must be validated by a NetUP engineer.
-          </div>
+      <div className="space-y-7">
+        <HeroSection />
+        <HomeWorkspacePreview reviewPayload={reviewPayload} resultsPayload={resultsPayload} />
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.14fr)_minmax(0,0.92fr)_minmax(300px,0.86fr)] xl:items-start">
+          {entryMode === "conversation" ? (
+            <>
+              <div className="min-w-0 xl:col-span-1">
+                <ConversationPanel
+                  onUseGuidedConfigurator={focusWizard}
+                  onExtractionSuccess={showConversationReview}
+                  resetSignal={conversationResetSignal}
+                />
+              </div>
+              <div className="min-w-0 xl:col-span-1">
+                <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-5">
+                  <p className="text-sm uppercase tracking-[0.22em] text-blue">Requirement Auditor</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-ink">What the assistant will check</h2>
+                  <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
+                    <li>Project type, scale, channels, and content-source mix.</li>
+                    <li>Client devices, delivery path, and required feature set.</li>
+                    <li>Existing infrastructure, redundancy expectations, and open engineering questions.</li>
+                    <li>Whether enough data exists for a credible preliminary NetUP package.</li>
+                  </ul>
+                </div>
+              </div>
+              <aside className="min-w-0 space-y-5 xl:col-span-1">
+                <div className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-5">
+                  <p className="text-sm uppercase tracking-[0.24em] text-blue">Why deterministic rules</p>
+                  <h2 className="mt-2 text-xl font-semibold text-ink">AI extracts. NetUP rules validate.</h2>
+                  <ul className="mt-3 space-y-2.5 text-sm text-slate-600">
+                    <li>Recommendations come from validated backend rules, not generic AI text generation.</li>
+                    <li>Missing data stays visible so the presales diagnosis remains honest.</li>
+                    <li>Final compatibility, sizing, pricing, and redundancy design still belong to a NetUP engineer.</li>
+                  </ul>
+                </div>
+              </aside>
+            </>
+          ) : null}
+        </section>
+
+        <div id="guided-configurator" ref={wizardRef} className={entryMode === "guided" ? "min-w-0 space-y-5" : "hidden"}>
           {error ? <div className="panel p-6 text-sm text-red-600">{error}</div> : null}
           {options ? (
             <Wizard
@@ -117,26 +145,7 @@ export default function HomePage() {
             <div className="panel p-6 text-sm text-slate-500">Loading configurator options...</div>
           )}
         </div>
-
-        {entryMode === "conversation" ? (
-          <aside className="min-w-0 space-y-5 xl:pt-2">
-            <ConversationPanel
-              onUseGuidedConfigurator={focusWizard}
-              onExtractionSuccess={showConversationReview}
-              resetSignal={conversationResetSignal}
-            />
-            <div className="panel p-5">
-              <p className="text-sm uppercase tracking-[0.24em] text-blue">Why deterministic rules</p>
-              <h2 className="mt-2 text-xl font-semibold text-ink">AI assists the intake, not the recommendation engine</h2>
-              <ul className="mt-3 space-y-2.5 text-sm text-slate-600">
-                <li>Recommendations always come from validated backend rules.</li>
-                <li>Capacity calculations stay deterministic and auditable.</li>
-                <li>Every result is framed as a preliminary presales view, not a final engineering design.</li>
-              </ul>
-            </div>
-          </aside>
-        ) : null}
-      </section>
+      </div>
     </main>
   );
 }

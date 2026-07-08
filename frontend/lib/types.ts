@@ -13,6 +13,53 @@ export type ConfigOptionsResponse = {
 
 export type ClaimStatus = "confirmed" | "calculated" | "inferred" | "conditional" | "unknown" | "provisional";
 
+export type ValidationStatus =
+  | "validated_rule"
+  | "detected"
+  | "confirmed"
+  | "missing"
+  | "needs_review"
+  | "assumption"
+  | "needs_engineer_review"
+  | "missing_data";
+
+export type WorkflowStepDescriptor = {
+  id: string;
+  title: string;
+  description: string;
+};
+
+export type RequirementCardData = {
+  id: string;
+  title: string;
+  value: string;
+  status: ValidationStatus;
+  detail?: string | null;
+  fieldKey?: string;
+};
+
+export type ReadinessDiagnosis = {
+  score: number;
+  completeCount: number;
+  totalCount: number;
+  missingItems: string[];
+  cards: RequirementCardData[];
+  nextQuestion?: string | null;
+};
+
+export type ReportSectionDescriptor = {
+  id: string;
+  title: string;
+  summary?: string;
+};
+
+export type ArchitecturePreviewBlock = {
+  id: string;
+  label: string;
+  items: string[];
+  emphasized?: boolean;
+};
+
 export type EvidenceReference = {
   id: string;
   title: string;

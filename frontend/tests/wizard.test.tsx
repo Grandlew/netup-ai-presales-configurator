@@ -456,9 +456,9 @@ describe("Wizard", () => {
 
     render(<ResultsPage />);
 
-    expect(await screen.findByRole("heading", { name: "Recommended product families" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Capacity estimates" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Missing decision-critical information" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Recommended NetUP Components" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Capacity Assumptions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Questions for NetUP Engineer" })).toBeInTheDocument();
     expect(screen.getAllByText("NetUP IPTV Combine 8x").length).toBeGreaterThan(0);
     expect(screen.getAllByText("806.4 Mbps").length).toBeGreaterThan(0);
     expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
@@ -492,8 +492,8 @@ describe("ConversationPanel", () => {
     const onExtractionSuccess = vi.fn();
     render(<ConversationPanel onExtractionSuccess={onExtractionSuccess} />);
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(onExtractionSuccess).toHaveBeenCalledTimes(1);
@@ -517,14 +517,14 @@ describe("ConversationPanel", () => {
 
     render(<ConversationPanel onUseGuidedConfigurator={onUseGuidedConfigurator} />);
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project with LG TVs");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Hotel project with LG TVs");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(screen.getByText("We could not extract the project requirements. Please try again.")).toBeInTheDocument();
     });
 
-    expect(screen.getByPlaceholderText(/We have a 180-room hotel/i)).toHaveValue("Hotel project with LG TVs");
+    expect(screen.getByRole("textbox", { name: /Project description/i })).toHaveValue("Hotel project with LG TVs");
     expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Use guided configurator" })).toBeEnabled();
 
@@ -571,8 +571,8 @@ describe("ConversationPanel", () => {
 
     render(<ConversationPanel onExtractionSuccess={onExtractionSuccess} />);
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(screen.getByText("The extraction request timed out. Please try again.")).toBeInTheDocument();
@@ -601,15 +601,15 @@ describe("ConversationPanel", () => {
 
     render(<ConversationPanel />);
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(screen.getByText("Natural-language intake is currently unavailable because the AI service is not configured.")).toBeInTheDocument();
     });
 
     expect(screen.getByText("You can continue with the guided configurator.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Extract requirements" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Analyze Project Requirements" })).toBeDisabled();
   });
 
   it("does not show AI unavailable when the AI is configured but the request fails", async () => {
@@ -628,8 +628,8 @@ describe("ConversationPanel", () => {
 
     render(<ConversationPanel />);
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Hotel project");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(screen.getByText("We could not extract the project requirements. Please try again.")).toBeInTheDocument();
@@ -652,6 +652,7 @@ describe("ResultsPanel", () => {
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
+        onCopyReport={vi.fn()}
         onDownloadPdf={vi.fn()}
         onDownloadWord={vi.fn()}
         onStartOver={vi.fn()}
@@ -681,6 +682,7 @@ describe("ResultsPanel", () => {
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
+          onCopyReport={vi.fn()}
           onDownloadPdf={vi.fn()}
           onDownloadWord={vi.fn()}
           onStartOver={vi.fn()}
@@ -708,6 +710,7 @@ describe("ResultsPanel", () => {
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
+          onCopyReport={vi.fn()}
           onDownloadPdf={vi.fn()}
           onDownloadWord={vi.fn()}
           onStartOver={vi.fn()}
@@ -736,6 +739,7 @@ describe("ResultsPanel", () => {
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
+        onCopyReport={vi.fn()}
         onDownloadPdf={vi.fn()}
         onDownloadWord={vi.fn()}
         onStartOver={vi.fn()}
@@ -749,7 +753,7 @@ describe("ResultsPanel", () => {
     expect(screen.getAllByText("Existing IP streams").length).toBeGreaterThan(0);
     expect(screen.getAllByText("NetUP IPTV Combine 8x").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Smart TV, Set-top box").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Unknown$/i)).not.toBeInTheDocument();
   });
 
   it("keeps a single start-over action and orders the action buttons as specified", () => {
@@ -762,6 +766,7 @@ describe("ResultsPanel", () => {
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
+        onCopyReport={vi.fn()}
         onDownloadPdf={vi.fn()}
         onDownloadWord={vi.fn()}
         onStartOver={vi.fn()}
@@ -772,13 +777,12 @@ describe("ResultsPanel", () => {
     );
 
     const actionButtons = screen.getByTestId("actions-card").querySelectorAll("button");
-    expect(screen.getAllByRole("button", { name: "Start over" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Start New Configuration" })).toHaveLength(1);
     expect(Array.from(actionButtons).map((button) => button.textContent?.trim())).toEqual([
-      "Request engineering review",
-      "Download preliminary report",
-      "Save lead",
-      "Edit configuration",
-      "Start over",
+      "Download PDF",
+      "Copy Report",
+      "Start New Configuration",
+      "Send to NetUP Engineer",
     ]);
   });
 
@@ -793,6 +797,7 @@ describe("ResultsPanel", () => {
         onRequestEngineeringReview={vi.fn()}
         onSaveLead={vi.fn()}
         onPrintReport={vi.fn()}
+        onCopyReport={vi.fn()}
         onDownloadPdf={vi.fn()}
         onDownloadWord={vi.fn()}
         onStartOver={vi.fn()}
@@ -821,6 +826,7 @@ describe("ResultsPanel", () => {
           onRequestEngineeringReview={vi.fn()}
           onSaveLead={vi.fn()}
           onPrintReport={vi.fn()}
+          onCopyReport={vi.fn()}
           onDownloadPdf={vi.fn()}
           onDownloadWord={vi.fn()}
           onStartOver={vi.fn()}
@@ -847,7 +853,7 @@ describe("HomePage layout", () => {
     });
 
     expect(document.querySelector("main")).toHaveClass("shell");
-    expect(screen.getAllByText(options.disclaimer)).toHaveLength(1);
+    expect(screen.getAllByText(/Final equipment selection, licensing, compatibility, redundancy, and pricing stay with a NetUP engineer\./i)).toHaveLength(1);
   });
 
   it("switches to guided mode, scrolls, and focuses the first field", async () => {
@@ -861,7 +867,7 @@ describe("HomePage layout", () => {
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "Natural-language intake" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Project intake and requirement analysis" })).not.toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: "Describe my project instead" })).toBeInTheDocument();
@@ -879,11 +885,11 @@ describe("HomePage layout", () => {
       expect(api.options).toHaveBeenCalled();
     });
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Project draft already typed here");
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Project draft already typed here");
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: "Natural-language intake" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Project intake and requirement analysis" })).not.toBeInTheDocument();
     });
 
     expect(screen.getByRole("combobox", { name: /Project type/i })).toBeInTheDocument();
@@ -897,7 +903,7 @@ describe("HomePage layout", () => {
       expect(api.options).toHaveBeenCalled();
     });
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "Project draft");
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "Project draft");
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
     expect(api.extract).not.toHaveBeenCalled();
@@ -916,7 +922,7 @@ describe("HomePage layout", () => {
     await user.type(screen.getByRole("spinbutton", { name: /Number of rooms/i }), "180");
 
     await user.click(screen.getByRole("button", { name: "Describe my project instead" }));
-    expect(screen.getByRole("heading", { name: "Natural-language intake" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project intake and requirement analysis" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
@@ -944,8 +950,8 @@ describe("HomePage layout", () => {
       expect(api.options).toHaveBeenCalled();
     });
 
-    await user.type(screen.getByPlaceholderText(/We have a 180-room hotel/i), "We have a 180-room hotel project");
-    await user.click(screen.getByRole("button", { name: "Extract requirements" }));
+    await user.type(screen.getByRole("textbox", { name: /Project description/i }), "We have a 180-room hotel project");
+    await user.click(screen.getByRole("button", { name: "Analyze Project Requirements" }));
 
     await waitFor(() => {
       expect(routerPush).toHaveBeenCalledWith("/review");
@@ -1065,11 +1071,14 @@ describe("HomePage layout", () => {
   });
 
   it("renders all seven complete step labels without truncation in desktop navigation", async () => {
+    const user = userEvent.setup();
     render(<HomePage />);
 
     await waitFor(() => {
       expect(api.options).toHaveBeenCalled();
     });
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
     expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Profile");
     expect(screen.getByTestId("desktop-progress")).toHaveTextContent("Sources");
@@ -1086,11 +1095,14 @@ describe("HomePage layout", () => {
   });
 
   it("keeps compact progress for mobile while using multi-row desktop progress for tablet widths", async () => {
+    const user = userEvent.setup();
     render(<HomePage />);
 
     await waitFor(() => {
       expect(api.options).toHaveBeenCalled();
     });
+
+    await user.click(screen.getByRole("button", { name: "Use guided configurator" }));
 
     expect(screen.getByTestId("desktop-progress-compact")).toHaveClass("md:grid", "xl:hidden");
     expect(screen.getByTestId("compact-progress")).toHaveClass("md:hidden");

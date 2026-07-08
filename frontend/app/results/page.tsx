@@ -146,6 +146,39 @@ export default function ResultsPage() {
     }
   }
 
+  async function handleCopyReport() {
+    try {
+      const lines = [
+        "NetUP Preliminary Presales Recommendation",
+        "",
+        "Executive Summary",
+        resultsPayload.recommendation.project_summary,
+        "",
+        "Detected Requirements",
+        `Project type: ${resultsPayload.submittedValues.project_type ?? "Not specified"}`,
+        `Scale: ${resultsPayload.submittedValues.subscribers_or_rooms ?? "Not specified"}`,
+        `Channels: ${resultsPayload.submittedValues.number_of_channels ?? "Not specified"}`,
+        `Delivery mode: ${resultsPayload.submittedValues.delivery_mode ?? "Not specified"}`,
+        "",
+        "Recommended NetUP Components",
+        ...resultsPayload.recommendation.recommendations.map((item) => `- ${item.product}: ${item.reason}`),
+        "",
+        "Risks / Unknowns",
+        ...resultsPayload.recommendation.assumptions,
+        "",
+        "Recommended Next Step",
+        resultsPayload.recommendation.next_question ?? "Proceed to NetUP engineer review.",
+      ].filter(Boolean);
+
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setBanner({ kind: "success", message: "The report content was copied to the clipboard." });
+      return true;
+    } catch (err) {
+      setBanner({ kind: "error", message: err instanceof Error ? err.message : "We could not copy the report." });
+      return false;
+    }
+  }
+
   function handleEditConfiguration() {
     setHomeNavigationIntent({
       entryMode: "guided",
@@ -182,6 +215,7 @@ export default function ResultsPage() {
           onRequestEngineeringReview={() => ensureLeadAndReport("Engineering review has been requested and the lead was saved.", "review").then((result) => result.ok)}
           onSaveLead={() => ensureLeadAndReport("Lead saved successfully for follow-up.", "save").then((result) => result.ok)}
           onPrintReport={() => ensureLeadAndReport("The preliminary report is ready below for printing or download.", "report").then((result) => result.ok)}
+          onCopyReport={handleCopyReport}
           onDownloadPdf={() => handleDownload("pdf")}
           onDownloadWord={() => handleDownload("doc")}
           onStartOver={() => setStartOverOpen(true)}

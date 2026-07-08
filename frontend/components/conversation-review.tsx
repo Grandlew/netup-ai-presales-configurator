@@ -3,8 +3,9 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { buildReadinessDiagnosis } from "@/lib/presales-diagnosis";
 import { setReviewAuditTrace } from "@/lib/flow-storage";
-import type { ConfigOptionsResponse, ExtractResponse } from "@/lib/types";
+import type { ConfigOptionsResponse, ExtractResponse, ValidationStatus } from "@/lib/types";
 
 const ENUM_LABELS: Record<string, string> = {
   both: "Both",
@@ -252,6 +253,32 @@ function getSummaryIcon(field: string, value: unknown) {
   return null;
 }
 
+function ValidationPill({ status }: { status: ValidationStatus }) {
+  const styles: Record<ValidationStatus, string> = {
+    validated_rule: "bg-emerald-50 text-emerald-700",
+    detected: "bg-blue-50 text-blue",
+    confirmed: "bg-emerald-50 text-emerald-700",
+    missing: "bg-red-50 text-red-700",
+    needs_review: "bg-amber-50 text-amber-900",
+    assumption: "bg-slate-100 text-slate-700",
+    needs_engineer_review: "bg-amber-50 text-amber-900",
+    missing_data: "bg-red-50 text-red-700",
+  };
+
+  const labels: Record<ValidationStatus, string> = {
+    validated_rule: "Validated rule",
+    detected: "Detected",
+    confirmed: "Confirmed",
+    missing: "Missing",
+    needs_review: "Needs review",
+    assumption: "Assumption",
+    needs_engineer_review: "Needs engineer review",
+    missing_data: "Missing data",
+  };
+
+  return <span className={clsx("inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]", styles[status])}>{labels[status]}</span>;
+}
+
 function humanize(value: string) {
   if (ENUM_LABELS[value]) return ENUM_LABELS[value];
   if (FIELD_LABELS[value]) return FIELD_LABELS[value];
@@ -479,11 +506,13 @@ export function ConversationReview({
   const [inferenceDecisions, setInferenceDecisions] = useState<Record<InferenceKey, InferenceDecision>>({ live_tv: null, epg: null });
   const [recordAllChannels, setRecordAllChannels] = useState<boolean | null>(null);
   const [advancedDetailsOpen, setAdvancedDetailsOpen] = useState(false);
+  const [confirmedRequirementCards, setConfirmedRequirementCards] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setFormValues(createInitialValues(response.extracted_requirements ?? {}, originalMessage));
     setInferenceDecisions({ live_tv: null, epg: null });
     setAdvancedDetailsOpen(false);
+    setConfirmedRequirementCards({});
   }, [response, originalMessage]);
 
   useEffect(() => {
@@ -598,6 +627,11 @@ export function ConversationReview({
         .map(([field, value]) => ({ field, value, sourceText: deriveSourcePhrase(field, originalMessage), state: "explicit" as const }));
     },
     [backendTrace, formValues, hotelSmartTvFlow, originalMessage, selectedDevices, selectedServices, selectedSources],
+  );
+
+  const readinessDiagnosis = useMemo(
+    () => buildReadinessDiagnosis(formValues, backendTrace, response.missing_required_fields ?? [], response.next_question),
+    [backendTrace, formValues, response.missing_required_fields, response.next_question],
   );
 
   const followUpItems = useMemo(() => {
@@ -783,6 +817,88 @@ export function ConversationReview({
         <p className="mt-3 max-w-3xl text-sm text-slate-600">
           Review the extracted project picture, confirm any suggested interpretations, and answer the next highest-priority question before continuing.
         </p>
+      </section>
+
+      <section className="panel border-blue/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(244,249,255,0.96)_100%)] p-6 md:p-7">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.24em] text-blue">Presales diagnosis</p>
+            <h3 className="mt-2 text-2xl font-semibold text-ink">Project readiness: {readinessDiagnosis.score}% complete</h3>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">
+              The assistant highlights what is already detected, what still needs confirmation, and what remains missing before a credible engineer-ready recommendation.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-white/80 bg-white/76 px-5 py-4 shadow-[0_10px_24px_rgba(15,39,69,0.06)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Coverage</p>
+            <p className="mt-2 text-3xl font-semibold text-ink">
+              {readinessDiagnosis.completeCount}/{readinessDiagnosis.totalCount}
+            </p>
+            <p className="mt-2 text-sm text-slate-600">Core presales requirement categories identified.</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.75fr)]">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {readinessDiagnosis.cards.map((card) => {
+              const visibleStatus = confirmedRequirementCards[card.id] && card.status !== "missing" ? "confirmed" : card.status;
+              const editTargetStep = getWizardStepForField(card.fieldKey ?? "project_type");
+
+              return (
+                <div key={card.id} className="rounded-3xl border border-white/80 bg-white/82 p-5 shadow-[0_10px_24px_rgba(15,39,69,0.06)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{card.title}</p>
+                    <ValidationPill status={visibleStatus} />
+                  </div>
+                  <p className="mt-3 text-sm font-medium leading-6 text-ink">{card.value}</p>
+                  {card.detail ? <p className="mt-2 text-xs leading-5 text-slate-500">{card.detail}</p> : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openGuidedConfiguration(card.id === "open_questions" ? firstUnresolvedStep : editTargetStep)}
+                      className="rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold text-ink transition hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue focus-visible:ring-offset-2"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={card.status === "missing"}
+                      onClick={() => setConfirmedRequirementCards((current) => ({ ...current, [card.id]: true }))}
+                      className="rounded-full bg-ink px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Missing</p>
+              {readinessDiagnosis.missingItems.length ? (
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {readinessDiagnosis.missingItems.map((item) => (
+                    <li key={item} className="rounded-2xl bg-red-50 px-3 py-2 text-red-700">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-slate-600">No major gaps are currently hidden from the presales diagnosis.</p>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Engineer-review framing</p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                <li>Detected items are extracted from the customer text and still need human confirmation where material.</li>
+                <li>Missing data remains visible so the recommendation does not overstate confidence.</li>
+                <li>Final sizing, licensing, compatibility, redundancy, and pricing remain with a NetUP engineer.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="panel p-6 md:p-7">
