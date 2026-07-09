@@ -93,3 +93,70 @@ NetUP ReliabilityGraph AI must answer a harder question:
 ### Why No GNN Yet
 
 GNNs require real historical deployment and incident data. Starting with GNNs now would be premature. The first moat is deterministic engineering logic, graph structure, and correction data. Machine learning comes later.
+## Homepage Positioning
+
+### Main Headline
+
+AI Presales & Reliability Validator for NetUP IPTV/OTT Deployments
+
+### Subheadline
+
+Design, validate, and de-risk IPTV/OTT architectures before engineering review using structured requirements, dependency graphs, deterministic risk rules, and engineer-ready reports.
+
+### Core Message
+
+AI extracts. Rules validate. Graphs explain. Engineers approve.
+
+### What The System Produces
+
+- recommended architecture;
+- dependency graph;
+- missing information list;
+- capacity and compatibility risks;
+- failure-mode warnings;
+- engineer validation checklist;
+- professional handover report.
+## Assistant vs ReliabilityGraph System
+
+The chat assistant is not a separate product from the ReliabilityGraph system.
+
+The assistant is one interface that uses the same backend intelligence engine.
+
+The core engine should contain:
+- NetUP product knowledge;
+- requirement extraction;
+- architecture validation rules;
+- dependency graph generation;
+- risk scoring;
+- missing information detection;
+- diagnostic reasoning;
+- report generation.
+
+The interface layer may include:
+- chat assistant;
+- structured intake form;
+- diagnostic mode;
+- report dashboard;
+- engineer review panel.
+
+If NetUP asks for a simple chat assistant, the assistant should call the same engine through API endpoints instead of being rebuilt from scratch.
+
+This makes the chat assistant more reliable than a generic LLM chatbot.
+
+## Notes From Study
+
+### Key Idea 1
+
+Symptoms are not root causes.
+
+### Key Idea 2
+
+A failure should be traced through dependencies.
+
+### Key Idea 3
+
+Capacity risk must be estimated before deployment.
+
+### Key Idea 4
+
+A good AI system should explain uncertainty instead of pretending confidence.
