@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 
 import type { WizardFormValues } from "@/lib/schema";
 import {
@@ -245,6 +245,7 @@ export function ResultsPanel({
   onEditConfiguration,
   leadSaved,
   loadingAction,
+  followUpEditor,
 }: {
   recommendation: Recommendation;
   submittedValues?: WizardFormValues | null;
@@ -261,6 +262,7 @@ export function ResultsPanel({
   onEditConfiguration: () => void;
   leadSaved: boolean;
   loadingAction: boolean;
+  followUpEditor?: ReactNode;
 }) {
   const reportHref = reportHtml ? `data:text/html;charset=utf-8,${encodeURIComponent(reportHtml)}` : undefined;
   const generatedDate = useMemo(() => formatGeneratedDate(), []);
@@ -561,7 +563,7 @@ export function ResultsPanel({
           {recommendation.next_question ? (
             <div className="mt-4 rounded-2xl border border-blue/20 bg-blue-50 px-4 py-3 text-sm text-slate-700">
               <p className="font-medium text-ink">Highest-priority follow-up question</p>
-              <p className="mt-1">{recommendation.next_question}</p>
+              {followUpEditor ?? <p className="mt-1">{recommendation.next_question}</p>}
             </div>
           ) : null}
         </div>

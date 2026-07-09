@@ -1,11 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { ResultsFollowUpEditor } from "@/components/results-follow-up-editor";
 import { ResultsPanel } from "@/components/results-panel";
 import { api } from "@/lib/api";
-import { clearResultsPayload, getResultsPayload, type ResultsPayload, setHomeNavigationIntent } from "@/lib/flow-storage";
+import { clearResultsPayload, getResultsPayload, type ResultsPayload, setHomeNavigationIntent, setResultsPayload } from "@/lib/flow-storage";
+import { getResultsFollowUpDefinition } from "@/lib/results-follow-up";
 import { buildReferenceNumber, buildReportFileName } from "@/lib/recommendation-presentation";
 
 type BannerState =
@@ -24,6 +26,10 @@ export default function ResultsPage() {
   const [startOverOpen, setStartOverOpen] = useState(false);
   const [banner, setBanner] = useState<BannerState>(null);
   const [saveLeadSuccess, setSaveLeadSuccess] = useState(false);
+  const [followUpSyncState, setFollowUpSyncState] = useState<"idle" | "updating" | "synced" | "error">("idle");
+  const [followUpSyncMessage, setFollowUpSyncMessage] = useState<string | null>(null);
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const refreshRequestRef = useRef(0);
 
   useEffect(() => {
     setPayload(getResultsPayload());
@@ -35,6 +41,14 @@ export default function ResultsPage() {
     const timeoutId = window.setTimeout(() => setSaveLeadSuccess(false), 2500);
     return () => window.clearTimeout(timeoutId);
   }, [saveLeadSuccess]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!hydrated) {
     return (
@@ -70,6 +84,67 @@ export default function ResultsPage() {
   const resultsPayload = payload;
   const referenceNumber = buildReferenceNumber(resultsPayload.recommendation, resultsPayload.submittedValues);
   const reportFileName = buildReportFileName(referenceNumber);
+  function scheduleRecommendationRefresh(nextPayload: ResultsPayload) {
+    const nextFollowUp = getResultsFollowUpDefinition(nextPayload.recommendation.next_question, nextPayload.submittedValues);
+    if (!nextFollowUp?.complete) {
+      setFollowUpSyncState("idle");
+      setFollowUpSyncMessage(null);
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (refreshTimeoutRef.current) {
+      window.clearTimeout(refreshTimeoutRef.current);
+    }
+
+    const requestId = ++refreshRequestRef.current;
+    setFollowUpSyncState("updating");
+    setFollowUpSyncMessage("Answer saved. Updating the recommendation automatically...");
+
+    refreshTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        const recommendation = await api.recommend(nextPayload.submittedValues);
+        if (refreshRequestRef.current !== requestId) return;
+
+        const updatedPayload = {
+          submittedValues: nextPayload.submittedValues,
+          recommendation,
+        } satisfies ResultsPayload;
+
+        setPayload(updatedPayload);
+        setResultsPayload(updatedPayload);
+        setReportHtml(null);
+        setReportId(null);
+        setFollowUpSyncState("synced");
+        setFollowUpSyncMessage("Recommendation updated with the latest client answer.");
+      } catch (err) {
+        if (refreshRequestRef.current !== requestId) return;
+        setFollowUpSyncState("error");
+        setFollowUpSyncMessage("Answer saved locally, but the recommendation could not be refreshed automatically yet.");
+        setBanner({ kind: "error", message: err instanceof Error ? err.message : "We could not refresh the recommendation automatically." });
+      }
+    }, 650);
+  }
+
+  function handleFollowUpPatch(patch: Partial<ResultsPayload["submittedValues"]>) {
+    const nextPayload = {
+      ...resultsPayload,
+      submittedValues: {
+        ...resultsPayload.submittedValues,
+        ...patch,
+      },
+    } satisfies ResultsPayload;
+
+    setPayload(nextPayload);
+    setResultsPayload(nextPayload);
+    setReportHtml(null);
+    setReportId(null);
+    setBanner(null);
+    scheduleRecommendationRefresh(nextPayload);
+  }
 
   async function ensureLeadAndReport(successMessage: string, action: "review" | "save" | "report" = "report") {
     setLoadingAction(true);
@@ -222,6 +297,17 @@ export default function ResultsPage() {
           onEditConfiguration={handleEditConfiguration}
           leadSaved={saveLeadSuccess || Boolean(leadId)}
           loadingAction={loadingAction}
+          followUpEditor={
+            resultsPayload.recommendation.next_question ? (
+              <ResultsFollowUpEditor
+                question={resultsPayload.recommendation.next_question}
+                values={resultsPayload.submittedValues}
+                syncState={followUpSyncState}
+                syncMessage={followUpSyncMessage}
+                onPatch={handleFollowUpPatch}
+              />
+            ) : null
+          }
         />
       </div>
 

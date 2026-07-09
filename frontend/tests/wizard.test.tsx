@@ -464,6 +464,41 @@ describe("Wizard", () => {
     expect(screen.getAllByTestId("capacity-card")).toHaveLength(3);
   }, 10000);
 
+  it("saves an inline follow-up answer and refreshes the recommendation automatically", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.recommend).mockResolvedValueOnce({
+      ...recommendationResponse,
+      next_question: null,
+      project_summary: "180-room hotel IPTV deployment with LG UR7800 compatibility noted",
+    });
+
+    setResultsPayload({
+      recommendation: recommendationResponse as Recommendation,
+      submittedValues,
+    });
+
+    render(<ResultsPage />);
+
+    const modelInput = await screen.findByRole("textbox", { name: "TV model or series" });
+    await user.clear(modelInput);
+    await user.type(modelInput, "LG UR7800");
+
+    await waitFor(
+      () => {
+        expect(api.recommend).toHaveBeenCalledWith(expect.objectContaining({ hotel_tv_model: "LG UR7800" }));
+      },
+      { timeout: 3000 },
+    );
+
+    await waitFor(() => {
+      expect(getResultsPayload()?.submittedValues.hotel_tv_model).toBe("LG UR7800");
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Highest-priority follow-up question")).not.toBeInTheDocument();
+    });
+  }, 15000);
+
   it("retries recommendation generation after an API failure and preserves state", async () => {
     const user = userEvent.setup();
     vi.mocked(api.recommend)
