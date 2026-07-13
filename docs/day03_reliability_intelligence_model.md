@@ -779,3 +779,56 @@ The moat is not raw data.
 
 The moat is structured, evidence-linked, engineer-validated, outcome-verified reliability intelligence.
 
+## Day 3 Study Notes
+
+### Dependency Versus Causality
+
+A dependency graph shows which components rely on other components.
+
+A causal graph represents which conditions can produce specific failures.
+
+Dependencies help define where failure may propagate, but additional evidence is required to identify the actual cause of an incident.
+
+### Diagnostic Information Gain
+
+The best diagnostic question is not necessarily the most detailed question.
+
+It is the question that safely eliminates the greatest number of competing hypotheses.
+
+### Operational Reliability
+
+A running IPTV system should eventually be evaluated using:
+
+- latency;
+- traffic;
+- errors;
+- saturation;
+- topology;
+- configuration changes;
+- incident history.
+
+### Prediction Limitation
+
+The system should predict only failures with sufficient precursor signals and historical evidence.
+
+Abrupt failures must not be presented as reliably predictable.
+
+## Day 3 Moat Statement
+
+NetUP ReliabilityGraph AI will not compete through a chatbot interface.
+
+Its defensibility will come from a proprietary reliability intelligence model containing:
+
+- validated requirement-to-architecture mappings;
+- observed deployment topologies;
+- IPTV-specific failure signatures;
+- operational baselines;
+- evidence-linked causal hypotheses;
+- high-information diagnostic tests;
+- engineer corrections;
+- intervention outcomes;
+- calibrated failure forecasts;
+- reusable lessons across deployments.
+
+Every validated deployment and incident should improve the system for future users.
+
