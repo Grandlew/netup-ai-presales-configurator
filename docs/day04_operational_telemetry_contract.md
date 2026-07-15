@@ -543,3 +543,55 @@ Observation:
 ```text
 network.interface.packet_discards increased
 
+## Change Proximity
+
+Operational anomalies should be checked against recent:
+
+- configuration changes;
+- software releases;
+- firmware updates;
+- network changes;
+- service restarts;
+- maintenance actions.
+
+Initial look-back windows may include:
+
+- 15 minutes;
+- 1 hour;
+- 6 hours;
+- 24 hours;
+- 7 days.
+
+Temporal proximity increases the relevance of a change.
+
+It does not prove causality.
+
+A change becomes a confirmed cause only after:
+
+- diagnostic evidence;
+- successful rollback;
+- repeatable reproduction;
+- engineer confirmation;
+- verified intervention outcome.
+## Anomaly Strength
+
+One threshold breach should not automatically become an incident.
+
+Anomaly strength should consider:
+
+- magnitude;
+- duration;
+- rate of change;
+- recurrence;
+- baseline deviation;
+- data quality;
+- related signals;
+- affected services;
+- topology scope;
+- recent changes.
+
+Weak evidence:
+
+```text
+CPU reached 87% once.
+
