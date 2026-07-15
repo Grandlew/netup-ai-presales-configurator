@@ -595,3 +595,65 @@ Weak evidence:
 ```text
 CPU reached 87% once.
 
+## Day 4 Study Notes
+
+### Telemetry Is Evidence
+
+A metric or log is not automatically a diagnosis.
+
+It is an observation that may support or contradict a hypothesis.
+
+### Topology Is Essential
+
+The same error has different meaning depending on:
+
+- where it occurred;
+- which services depend on the component;
+- which rooms share the component;
+- which change preceded it.
+
+### Event Time Matters
+
+Operational records must preserve both observed time and ingestion time.
+
+Without correct time semantics, change correlation and incident reconstruction become unreliable.
+
+### Baselines Must Be Deployment-Specific
+
+A healthy value in one hotel may be abnormal in another.
+
+The system must eventually learn normal behaviour per deployment, component, signal, and operating period.
+
+### Data Quality Must Be Explicit
+
+Weakly mapped or unverified telemetry must not receive the same weight as trusted evidence.
+
+### Prediction Must Wait
+
+A forecast becomes defensible only after:
+
+- stable collection;
+- accurate topology mapping;
+- sufficient historical data;
+- labelled incidents;
+- verified outcomes;
+- measured false-positive rates.
+
+## Day 4 Moat Statement
+
+NetUP ReliabilityGraph AI will not merely collect infrastructure metrics.
+
+It will build a proprietary operational dataset in which every accepted observation is connected to:
+
+- deployment architecture;
+- affected services;
+- topology scope;
+- configuration history;
+- failure hypotheses;
+- engineer decisions;
+- interventions;
+- verified outcomes.
+
+The defensible asset is not telemetry volume.
+
+It is semantically normalized, topology-linked, quality-scored, evidence-connected, and outcome-verified IPTV reliability intelligence.
