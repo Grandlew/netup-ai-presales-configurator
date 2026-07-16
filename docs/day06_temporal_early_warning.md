@@ -325,3 +325,51 @@ Repeated warnings for the same:
 
 should update one active alert rather than create endless duplicates.
 
+## Early-Warning Evaluation
+
+Forecast accuracy alone is insufficient.
+
+The system should eventually measure:
+
+### Forecast Availability
+
+How often the system produced a forecast instead of abstaining.
+
+### Threshold-Crossing Error
+
+Difference between forecast crossing time and actual crossing time.
+
+### Early-Warning Recall
+
+Fraction of observed incidents that received a warning within the target horizon.
+
+### Warning Precision
+
+Fraction of warnings followed by the target incident.
+
+### Lead Time
+
+How much useful time existed between warning and incident.
+
+### False-Warning Burden
+
+Number of warnings that did not lead to the target incident.
+
+### Alert Persistence
+
+Whether the warning survived multiple evaluation windows.
+
+### Calibration
+
+Whether forecast probabilities, once introduced, match observed frequencies.
+
+### Engineer Usefulness
+
+Whether engineers judged the warning actionable and correct.
+
+## Critical Product Metric
+
+The best forecast is not merely accurate.
+
+It must provide enough lead time for a safe preventive intervention without generating intolerable false alarms.
+
