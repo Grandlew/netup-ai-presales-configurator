@@ -413,3 +413,55 @@ The signature is weakened when:
 - recording failures are isolated to one channel;
 - application exceptions explain the failure;
 - storage remediation does not change outcomes.
+
+## Day 5 Study Notes
+
+### Hypotheses Compete
+
+The system should maintain multiple plausible explanations until evidence separates them.
+
+### Ranking Is Not Confirmation
+
+A hypothesis may rank first and still be wrong.
+
+Confirmation requires direct evidence, successful intervention, reproducibility, or engineer verification.
+
+### Contradictory Evidence Matters
+
+A trustworthy system must actively search for evidence that weakens its preferred explanation.
+
+### Diagnostic Questions Should Maximize Information
+
+The best next question is the safest question that most clearly separates the leading hypotheses.
+
+### Interventions Must Be Controlled
+
+Observation should come before modification.
+
+Reversible actions should come before irreversible actions.
+
+Engineer approval is mandatory for production changes during early product versions.
+
+## Day 5 Moat Statement
+
+NetUP ReliabilityGraph AI will not merely detect anomalies or list possible causes.
+
+Its proprietary reasoning layer will preserve:
+
+- candidate hypotheses;
+- supporting evidence;
+- contradicting evidence;
+- evidence quality;
+- topology scope;
+- missing evidence;
+- diagnostic-test utility;
+- intervention safety;
+- engineer decisions;
+- verified outcomes;
+- reusable failure signatures.
+
+Every resolved case improves the system’s future diagnostic pathways.
+
+The defensible asset is not a prompt that generates troubleshooting advice.
+
+It is an accumulating library of evidence-linked, engineer-validated, outcome-confirmed reliability reasoning.
