@@ -326,3 +326,90 @@ The system must not perform these autonomously in early versions:
 - roll out firmware;
 - alter content-protection settings.
 
+## Change-Event Reasoning Policy
+
+A configuration change may become relevant when:
+
+- it occurred before the degradation;
+- it affected the same component or service;
+- the timing is plausible;
+- the failure mechanism is technically plausible;
+- no stronger alternative explanation exists.
+
+Change proximity initially creates contextual evidence.
+
+It becomes supporting causal evidence only when:
+
+- behaviour changed after the modification;
+- rollback reverses the degradation;
+- the effect is reproducible;
+- an engineer confirms the mechanism.
+
+Example:
+
+Retention increased from three days to seven days.
+
+Valid conclusion:
+
+"The retention change is a relevant preceding event that may have increased storage demand."
+
+Invalid conclusion:
+
+"The retention change caused the CatchUP failure."
+## Failure Signature FS-CATCHUP-STORAGE-001
+
+### Name
+
+CatchUP storage-path degradation
+
+### Trigger Signals
+
+- high or rapidly increasing storage utilisation;
+- elevated storage-write latency;
+- CatchUP recording failures;
+- cleanup-job failure;
+- retention-policy increase;
+- I/O errors.
+
+### Affected Services
+
+- CatchUP;
+- TimeShift;
+- VoD, when shared storage is used.
+
+### Candidate Causes
+
+- capacity saturation;
+- storage I/O degradation;
+- retention cleanup failure;
+- filesystem error;
+- hardware degradation;
+- application-worker failure.
+
+### High-Information Tests
+
+1. inspect free capacity and growth;
+2. inspect write latency and queue depth;
+3. inspect filesystem and disk errors;
+4. inspect cleanup-job status;
+5. inspect recording-worker health;
+6. compare failures across channels;
+7. test after an approved reversible intervention.
+
+### Confirmation Conditions
+
+The signature may be confirmed when:
+
+- direct storage errors are observed;
+- capacity or I/O limits are verified;
+- remediation restores recording;
+- an engineer verifies the cause.
+
+### Rejection Conditions
+
+The signature is weakened when:
+
+- storage health is normal;
+- recording failures are isolated to one channel;
+- application exceptions explain the failure;
+- storage remediation does not change outcomes.
