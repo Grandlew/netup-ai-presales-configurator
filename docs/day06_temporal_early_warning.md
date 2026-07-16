@@ -454,3 +454,58 @@ Prometheus defines `rate()` for calculating per-second average rates of counters
 
 OpenTelemetry’s metrics data model distinguishes metric streams and aggregation temporalities, reinforcing that collection systems must preserve the semantic meaning of sums, gauges, and time windows. :contentReference[oaicite:5]{index=5}
 
+## Day 6 Study Notes
+
+### Prediction Is Conditional
+
+A forecast is valid only under stated assumptions.
+
+### Temporal Order Is Sacred
+
+Future data must never influence an earlier forecast.
+
+### Early Warning Requires Lead Time
+
+A warning is valuable only when it arrives early enough for a safe response.
+
+### Multiple Signals Are Stronger
+
+Storage growth plus latency degradation plus recording failures is stronger than one threshold breach.
+
+### Abstention Is a Feature
+
+The model should not forecast when evidence is insufficient or unstable.
+
+### Regime Changes Invalidate Old Trends
+
+Maintenance, capacity expansion, configuration changes, and occupancy shifts may make previous trends irrelevant.
+
+### Evaluation Must Include False Warnings
+
+A model that catches every incident by warning constantly is useless.
+
+### Human Usefulness Matters
+
+Forecasts must eventually be judged by whether engineers found them understandable, timely, and actionable.
+
+## Day 6 Moat Statement
+
+NetUP ReliabilityGraph AI will not claim predictive intelligence merely because it extrapolates a metric.
+
+Its temporal moat will contain:
+
+- deployment-specific operating histories;
+- validated threshold-crossing forecasts;
+- IPTV-specific precursor signatures;
+- topology-linked multivariate deterioration patterns;
+- change-event and intervention boundaries;
+- abstention decisions;
+- false-warning outcomes;
+- engineer-rated warning usefulness;
+- observed incident lead times;
+- calibrated forecast performance across comparable deployments.
+
+The defensible asset is not one forecasting algorithm.
+
+It is an accumulating record of which temporal patterns genuinely preceded which IPTV failures, under which architectures and operating conditions.
+
