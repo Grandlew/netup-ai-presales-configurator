@@ -373,3 +373,84 @@ The best forecast is not merely accurate.
 
 It must provide enough lead time for a safe preventive intervention without generating intolerable false alarms.
 
+## Regime Changes and Forecast Invalidation
+
+A recent trend may become invalid after:
+
+- retention-policy change;
+- storage expansion;
+- cleanup-job repair;
+- occupancy shift;
+- channel-count change;
+- application deployment;
+- hardware replacement;
+- maintenance action.
+
+A regime-changing event should:
+
+1. close or invalidate forecasts based on the old regime;
+2. begin a new baseline segment;
+3. prevent old and new observations from being blindly combined;
+4. trigger a temporary uncertainty increase;
+5. require enough new observations before forecasting resumes.
+
+### Example
+
+A forecast created before storage expansion must not remain active after capacity is added.
+
+The system must mark it:
+
+```text
+invalidated_by_intervention
+
+
+Concept drift and regime shifts are central early-warning problems because the relationship between signals can change over time; a model that ignores such changes can become confidently wrong. :contentReference[oaicite:3]{index=3}
+
+---
+
+# Part 29 — Add metric semantics discipline
+
+Add:
+
+```md
+## Counter and Gauge Semantics
+
+Not all metrics behave the same way.
+
+### Gauge
+
+Represents a value that may increase or decrease.
+
+Examples:
+
+- storage utilisation;
+- CPU utilisation;
+- active streams;
+- write latency.
+
+### Monotonic Counter
+
+Normally increases until reset.
+
+Examples:
+
+- total recording failures;
+- total authentication failures;
+- total bytes transmitted.
+
+For counters, the system should reason over:
+
+- rate;
+- increase over a window;
+- reset detection;
+
+rather than raw cumulative values.
+
+Example:
+
+```text
+recording_failure_total = 12,430
+Prometheus defines `rate()` for calculating per-second average rates of counters over a range and recommends applying it before aggregation so counter resets can be detected correctly. :contentReference[oaicite:4]{index=4}
+
+OpenTelemetry’s metrics data model distinguishes metric streams and aggregation temporalities, reinforcing that collection systems must preserve the semantic meaning of sums, gauges, and time windows. :contentReference[oaicite:5]{index=5}
+
