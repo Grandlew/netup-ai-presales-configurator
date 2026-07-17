@@ -94,3 +94,37 @@ Every label must record:
 6. timestamps must not trivially reveal the class;
 7. training and test sets must not share cloned scenario variants.
 
+## Dataset Export Boundary
+
+### Hidden Export
+
+Contains:
+
+- exact injected fault;
+- hidden component states;
+- propagation path;
+- simulator internals;
+- full ground truth.
+
+This file is restricted to labeling and evaluation.
+
+### Observable Export
+
+Contains:
+
+- topology;
+- telemetry;
+- change events;
+- logs;
+- alarms;
+- timestamps;
+- data quality;
+- approved labels in a separate target object.
+
+It must not contain:
+
+- fault parameters;
+- hidden health multipliers;
+- root-cause name in logs;
+- simulator branch identifiers;
+- future telemetry outside the prediction cut-off.
