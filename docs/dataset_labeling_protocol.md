@@ -128,3 +128,17 @@ It must not contain:
 - root-cause name in logs;
 - simulator branch identifiers;
 - future telemetry outside the prediction cut-off.
+
+## Synthetic Label Leakage Threats
+
+### Scenario-Name Leakage
+
+Bad:
+
+```text
+scenario_storage_failure_001```
+
+Better:
+
+```text
+scenario_83f14c'''
