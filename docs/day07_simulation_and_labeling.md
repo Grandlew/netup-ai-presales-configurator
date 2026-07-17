@@ -217,3 +217,72 @@ The pair differs in:
 Counterfactual pairs help answer:
 
 "What changed because of the fault rather than because of ordinary workload variation?"
+
+## Day 7 Study Notes
+
+### Simulation Is an Experiment
+
+A scenario requires:
+
+- a known healthy condition;
+- one controlled intervention or fault;
+- observable probes;
+- hidden causal truth;
+- a defined end condition;
+- optional rollback.
+
+### Labels Must Come From Hidden Causes
+
+A root-cause label must represent the injected causal mechanism, not a threshold applied to an observed metric.
+
+### Counterfactual Controls Matter
+
+Matched healthy scenarios help isolate effects caused by faults rather than ordinary workload variation.
+
+### Synthetic Data Can Mislead
+
+Models can exploit:
+
+- scenario names;
+- fixed injection times;
+- unique noise levels;
+- topology differences;
+- missingness patterns;
+- fault-specific log wording.
+
+Leakage audits are mandatory.
+
+### Topology Diversity Matters
+
+A graph model must generalize to unseen deployments rather than memorize one hotel architecture.
+
+### Synthetic Performance Is Not Production Evidence
+
+Synthetic experiments support development and falsification.
+
+They do not establish performance on real NetUP deployments.
+
+## Day 7 Moat Statement
+
+NetUP ReliabilityGraph AI will not create synthetic data merely to inflate machine-learning metrics.
+
+Its simulation infrastructure will preserve:
+
+- typed deployment topology;
+- operating context;
+- hidden fault mechanisms;
+- causal propagation paths;
+- controlled confounders;
+- observation noise;
+- telemetry missingness;
+- counterfactual healthy controls;
+- exact root-cause labels;
+- affected-service labels;
+- intervention outcomes;
+- dataset provenance.
+
+The simulator itself is not the final moat.
+
+Its value is that it creates a rigorous experimental framework in which rules, temporal models, classical baselines, and future GNNs can be challenged before exposure to production systems.
+
+The long-term moat remains real, engineer-verified operational cases.
