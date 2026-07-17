@@ -150,3 +150,134 @@ Bad:
 Every storage fault begins exactly at hour 12.
 Better:
 Sample injection time from a valid range.
+
+### Topology Leakage
+Bad:
+All worker failures occur only in small hotels.
+Better:
+Every fault class appears across multiple topology families.
+
+### Severity Leakage
+Bad:
+Every capacity fault has severity 1.0.
+Better:
+Sample severity across overlapping ranges.
+
+### Missingness Leakage
+Bad:
+Only faulty scenarios contain missing telemetry.
+Better:
+Generate collection loss independently of fault class, while allowing some faults to affect collector health only when causally justified
+
+### Seed Leakage
+Bad:
+Seeds 1–100 are healthy and 101–200 are faulty.
+Better:
+Randomize seeds independently of labels and store them only in hidden metadata.
+
+
+---
+
+# Part 22 — Define dataset splits
+
+This is essential for the future GNN.
+
+Random scenario splitting is not enough.
+
+Add:
+
+```md
+## Dataset Splitting Protocol
+
+### Training Split
+
+Contains selected deployment instances and scenario seeds.
+
+### Validation Split
+
+Contains different deployment instances and scenario seeds.
+
+### Test Split
+
+Contains:
+
+- unseen deployment instances;
+- unseen topology parameter combinations;
+- unseen scenario seeds;
+- counterfactual pairs not represented in training.
+
+### Out-of-Distribution Test
+
+May contain:
+
+- larger hotels;
+- additional floors;
+- redundant architectures;
+- stronger missingness;
+- unseen workload regimes;
+- fault severities outside the training range.
+
+## Grouping Rule
+
+All scenarios generated from the same base topology instance must remain in one split.
+
+A healthy/faulty counterfactual pair must remain in one split.
+
+Cloned variants of one scenario must remain in one split.
+
+## Temporal Rule
+
+For scenarios derived from real deployments later:
+
+- earlier incidents belong to training;
+- later incidents belong to validation or test;
+- future incidents must not leak backward.
+
+## Future GNN Sample Contract
+
+Each scenario window will eventually produce:
+
+### Node Features
+
+- component-type encoding;
+- current telemetry;
+- rolling means;
+- rolling slopes;
+- baseline deviations;
+- recent-change flags;
+- missingness indicators;
+- component criticality;
+- structural degree features.
+
+### Edge Features
+
+- dependency type;
+- propagation direction;
+- service relation;
+- propagation delay;
+- edge criticality.
+
+### Node Targets
+
+- root-cause node label;
+- affected-node label.
+
+### Graph Targets
+
+- incident class;
+- failure type;
+- future-incident label.
+
+### Edge Targets
+
+- propagation-path label.
+
+### Temporal Context
+
+- window start;
+- observation cut-off;
+- prediction horizon;
+- incident onset;
+- feature mask;
+
+
