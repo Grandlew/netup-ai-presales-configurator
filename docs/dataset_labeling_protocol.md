@@ -134,11 +134,19 @@ It must not contain:
 ### Scenario-Name Leakage
 
 Bad:
-
-```text
-scenario_storage_failure_001```
+scenario_storage_failure_001
 
 Better:
+scenario_83f14c
 
-```text
-scenario_83f14c'''
+### Log-Message Leakage
+Bad:
+Root cause: storage I/O degradation
+Better: 
+Write request exceeded configured timeout.
+
+### Fault-Timing Leakage
+Bad:
+Every storage fault begins exactly at hour 12.
+Better:
+Sample injection time from a valid range.
