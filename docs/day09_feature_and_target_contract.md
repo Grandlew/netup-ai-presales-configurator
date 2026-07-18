@@ -93,3 +93,27 @@ For each signal:
 - missing indicator.
 
 Zero and missing are not equivalent.
+
+## Edge Feature Contract
+
+Each edge receives:
+
+- edge-type one-hot encoding;
+- propagation direction indicator;
+- propagation delay;
+- propagation strength.
+
+Initial edge types:
+
+- depends_on;
+- sends_to;
+- authenticates_with;
+- stores_on;
+- serves;
+- connected_to.
+
+The graph initially remains homogeneous.
+
+Node and edge types are represented as features.
+
+A heterogeneous GNN will be introduced only after the homogeneous baseline is established.
