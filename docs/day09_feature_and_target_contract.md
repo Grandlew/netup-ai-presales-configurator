@@ -117,3 +117,55 @@ The graph initially remains homogeneous.
 Node and edge types are represented as features.
 
 A heterogeneous GNN will be introduced only after the homogeneous baseline is established.
+## Target Contract
+
+### Root-Cause Node Target
+
+For each node:
+
+- `1` if the node is the hidden primary root cause;
+- `0` otherwise.
+
+Healthy windows contain no positive root-cause node.
+
+### Current-Incident Target
+
+Graph-level target:
+
+- `1` if an incident is active at the observation cutoff;
+- `0` otherwise.
+
+### Future-Incident Target
+
+Graph-level target:
+
+- `1` if the target incident begins after the cutoff and within the prediction horizon;
+- `0` otherwise.
+
+### Failure-Type Target
+
+Examples:
+
+- healthy;
+- storage_capacity_saturation;
+- storage_io_degradation;
+- cleanup_job_failure;
+- catchup_worker_failure.
+
+### Affected-Service Target
+
+For every service node:
+
+- `1` if affected;
+- `0` otherwise.
+
+### Time-to-Incident Target
+
+Hours from the cutoff to incident onset.
+
+Use:
+
+- numeric value when incident begins after cutoff;
+- `0` when incident is already active;
+- mask when no incident occurs in the target horizon.
+
