@@ -48,3 +48,48 @@ The dataset should support:
 6. propagation-path prediction;
 7. out-of-distribution evaluation.
 
+## Dataset Philosophy
+
+### Domain Randomization
+
+The simulator varies nuisance and environmental parameters so that a model cannot depend on one narrow synthetic world.
+
+Randomization does not guarantee transfer to reality.
+
+It reduces dependence on arbitrary simulator settings and exposes model fragility.
+
+### Confounders
+
+A confounder resembles part of a failure signature without containing the target root cause.
+
+Examples:
+
+- high storage utilisation caused by normal demand;
+- high write latency during a brief workload peak;
+- a worker restart without sustained recording failure;
+- missing telemetry during healthy service.
+
+### Counterfactual Pair
+
+A faulty scenario and a healthy control share the same:
+
+- topology;
+- operating regime;
+- workload parameters;
+- background noise policy;
+- observation schedule.
+
+They differ in the hidden fault and its consequences.
+
+### Environment
+
+An environment is a combination of topology and operating conditions.
+
+Examples:
+
+- small hotel with low occupancy;
+- medium hotel with high evening demand;
+- redundant middleware deployment;
+- high-retention CatchUP deployment.
+
+Environment identity is used for analysis and splitting, not as a model feature.
