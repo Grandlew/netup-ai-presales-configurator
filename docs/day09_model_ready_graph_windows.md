@@ -79,3 +79,47 @@ day09_model_ready/
 ├── ood_test/
 ├── manifest.json
 └── audit.json
+## Temporal Window Definition
+
+A model-ready sample is defined by:
+
+- scenario;
+- observation-window start;
+- observation cutoff;
+- prediction horizon;
+- graph topology;
+- visible telemetry up to the cutoff;
+- targets after the cutoff.
+
+### Example
+
+Observation window:
+
+
+08:00–14:00
+
+Prediction horizon:
+next 6 hours
+Input data:
+events observed at or before 14:00
+Target data:
+whether an incident starts after 14:00 and by 20:00
+Events after 14:00 must never become features.
+
+Initial Window Configuration
+
+Observation lookback:
+
+3 hours;
+6 hours;
+12 hours.
+
+Prediction horizons:
+
+6 hours;
+12 hours;
+24 hours.
+
+Initial Day 9 default:
+6-hour observation window
+6-hour prediction horizon
