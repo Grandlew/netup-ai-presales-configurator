@@ -169,3 +169,25 @@ No Day 9 operation may reassign splits.
 The Day 8 dataset remains unchanged.
 
 Day 9 writes to a separate output directory.
+
+## Model-Ready Shortcut Audit
+
+Before training a real model, test whether targets can be predicted from:
+
+- node count;
+- edge count;
+- total event count;
+- average missingness;
+- observation-window index;
+- source scenario identifier;
+- window identifier;
+- split;
+- filename length;
+- feature sparsity only.
+
+These fields must either:
+
+1. be excluded from model features; or
+2. demonstrate weak target predictability.
+
+A high-performing shortcut baseline means the dataset is still leaking.
