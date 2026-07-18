@@ -123,3 +123,49 @@ Prediction horizons:
 Initial Day 9 default:
 6-hour observation window
 6-hour prediction horizon
+
+## Day 9 Scientific Safeguards
+
+### Cutoff Integrity
+
+Every feature must be computable using information available at the observation cutoff.
+
+### Target Isolation
+
+Ground truth may be read only by the target-building subsystem.
+
+### Identifier Opacity
+
+Scenario and window IDs must not contain:
+
+- failure class;
+- health state;
+- topology family;
+- split;
+- incident state.
+
+### Metadata Isolation
+
+Research metadata remains in the raw dataset only.
+
+### Feature Consistency
+
+Every node window uses the same feature ordering.
+
+Every edge window uses the same feature ordering.
+
+### Missingness Preservation
+
+Missing telemetry is represented explicitly rather than hidden through silent imputation.
+
+### Split Preservation
+
+A window inherits the split of its source scenario.
+
+No Day 9 operation may reassign splits.
+
+### Raw Dataset Immutability
+
+The Day 8 dataset remains unchanged.
+
+Day 9 writes to a separate output directory.
