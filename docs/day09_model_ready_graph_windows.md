@@ -191,3 +191,57 @@ These fields must either:
 2. demonstrate weak target predictability.
 
 A high-performing shortcut baseline means the dataset is still leaking.
+## Day 9 Study Notes
+
+### Raw Data and Model Data Are Different Products
+
+Raw data preserves provenance and debugging information.
+
+Model-ready data preserves only approved features and targets.
+
+### Future Information Must Be Isolated
+
+Every feature must be computable at the observation cutoff.
+
+### Context Is Not the Same as Simulator Explanation
+
+Operational facts may remain.
+
+Simulator labels explaining why those facts were generated must be removed.
+
+### Missingness Is Information
+
+Telemetry absence may matter, but it must not become an accidental class label.
+
+### Ordering Is Part of the Contract
+
+Node targets, node features and graph indices must share one stable ordering.
+
+### Identifiers Must Be Semantically Empty
+
+Scenario and window IDs should support tracking without revealing the answer.
+
+### Target Building Is Privileged
+
+Only the target builder may inspect hidden ground truth.
+
+## Day 9 Moat Statement
+
+NetUP ReliabilityGraph AI will not train models directly from simulator artifacts.
+
+Its model-ready data boundary will enforce:
+
+- opaque identifiers;
+- strict temporal cutoffs;
+- feature-target separation;
+- metadata sanitization;
+- explicit missingness;
+- stable feature schemas;
+- topology-preserving graph windows;
+- group-safe splits;
+- automated leakage audits;
+- reproducible export manifests.
+
+The moat is not a large collection of JSON files.
+
+It is a trustworthy transformation from operational evidence into graph-learning samples whose labels, timing and provenance can be defended.
