@@ -141,3 +141,60 @@ This task is evaluated only where the time-to-incident mask is active.
 11. Test evaluation must occur only after the model configuration is frozen.
 12. Every reported result must identify the benchmark fingerprint.
 
+## Benchmark Versioning
+
+Use semantic benchmark versions:
+
+MAJOR.MINOR.PATCH
+
+###Patch Increment
+Use when correcting:
+
+documentation;
+report formatting;
+non-semantic metadata;
+code that does not change exported samples.
+
+Example:
+0.1.0 → 0.1.1
+Minor Increment
+
+Use when changing:
+
+feature schema;
+target schema;
+scenario count;
+split membership;
+observation window;
+prediction horizon;
+supported failure class;
+sanitization logic.
+
+Example:
+0.1.0 → 0.2.0
+Major Increment
+
+Use when changing:
+
+core task definition;
+simulation-generation philosophy;
+single-fault to multi-fault assumptions;
+IPTV-only to multi-domain benchmark;
+label semantics in a non-compatible way.
+
+Example:
+Major Increment
+
+Use when changing:
+
+core task definition;
+simulation-generation philosophy;
+single-fault to multi-fault assumptions;
+IPTV-only to multi-domain benchmark;
+label semantics in a non-compatible way.
+
+Example:
+0.2.0 → 1.0.0
+Result Compatibility
+
+Results from different benchmark fingerprints must not be placed in one comparison table without explicitly identifying the dataset difference.
