@@ -198,3 +198,63 @@ Example:
 Result Compatibility
 
 Results from different benchmark fingerprints must not be placed in one comparison table without explicitly identifying the dataset difference.
+
+## Day 10 Study Notes
+
+### A Dataset Must Be Audited Before It Is Modeled
+
+Strong model performance cannot rescue a contaminated benchmark.
+
+### The Test Split Is Not a Development Tool
+
+It must not guide architecture or hyperparameter decisions.
+
+### Trivial Baselines Are Scientific Instruments
+
+A simple shortcut model can expose leakage that a complex GNN would hide.
+
+### Ranking Tasks Need Ranking Metrics
+
+Root-cause localization should not be judged primarily by node accuracy.
+
+### Healthy Systems Require Abstention
+
+A diagnosis system must learn when no root cause is present.
+
+### OOD Results Must Be Separate
+
+Good in-distribution performance does not imply deployment generalization.
+
+### Fingerprints Create Experimental Identity
+
+A benchmark result is meaningful only when the exact dataset version can be reconstructed.
+
+### Synthetic Evidence Has a Boundary
+
+Synthetic benchmarks can validate software and reject weak approaches.
+
+They cannot validate production reliability.
+
+## Day 10 Moat Statement
+
+NetUP ReliabilityGraph AI will not compare models on an undocumented, mutable synthetic dataset.
+
+Its benchmark governance will preserve:
+
+- dataset cards;
+- immutable benchmark versions;
+- feature and target contracts;
+- temporal cutoffs;
+- group-safe splits;
+- file-level fingerprints;
+- automated leakage audits;
+- shortcut baselines;
+- root-cause ranking metrics;
+- abstention metrics;
+- early-warning lead time;
+- OOD evaluation;
+- reproducible reports.
+
+The immediate moat is not model complexity.
+
+It is the ability to prove that a reported improvement came from learning useful operational structure rather than exploiting dataset contamination.
