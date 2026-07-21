@@ -109,3 +109,37 @@ Begin with local anomaly scores and propagate evidence from symptomatic dependen
 Example:
 
 CatchUPService → STORES_ON → CatchUPStorage
+
+
+---
+
+# Part 3 — Define success criteria
+
+Add:
+
+```md
+## Day 11 Success Criteria
+
+The baseline suite must report:
+
+- Mean Reciprocal Rank;
+- Hits@1;
+- Hits@3;
+- mean root-cause rank;
+- median root-cause rank;
+- healthy false-selection rate;
+- healthy abstention rate;
+- faulty-window coverage;
+- selective MRR;
+- runtime per window.
+
+The test and OOD results must remain separate.
+
+A future GNN is not accepted merely because it improves one metric by a negligible amount.
+
+It should improve root-cause ranking while preserving:
+
+- healthy abstention;
+- runtime practicality;
+- OOD robustness;
+- engineering interpretability.
