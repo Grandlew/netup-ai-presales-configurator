@@ -144,3 +144,53 @@ It should improve root-cause ranking while preserving:
 - OOD robustness;
 - engineering interpretability.
 
+## Day 11 Study Notes
+
+### Simple Baselines Protect Research Quality
+
+A GNN result has little meaning without strong deterministic comparisons.
+
+### Ranking Is More Appropriate Than Node Accuracy
+
+Root-cause diagnosis is an ordered candidate-retrieval problem.
+
+### Symptoms and Causes Are Different
+
+The node with the strongest error signal may be downstream from the true cause.
+
+### Topology Can Move Evidence
+
+Dependency structure may help move symptom evidence toward plausible causes.
+
+### Topology Can Also Mislead
+
+Incorrect edge semantics or propagation direction can amplify the wrong component.
+
+### Healthy Windows Need Abstention
+
+A useful diagnosis system must recognize when no root cause is supported.
+
+### Validation Selects Thresholds
+
+Test and OOD data must not influence abstention configuration.
+
+### OOD Performance Is a Separate Result
+
+A topology-aware heuristic that works only on familiar graph structures is not robust.
+
+## Day 11 Moat Statement
+
+NetUP ReliabilityGraph AI will not claim that graph learning adds value merely because a neural model processes architecture edges.
+
+The project will preserve a hierarchy of strong, interpretable baselines:
+
+- random ranking;
+- component criticality;
+- telemetry anomaly ranking;
+- explicit error scoring;
+- topology-aware evidence propagation;
+- hybrid engineering rules.
+
+These baselines create a permanent scientific control.
+
+Every future GNN must demonstrate that learned message passing improves root-cause localization beyond what can already be achieved using transparent operational logic.
